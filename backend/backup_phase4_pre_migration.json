@@ -1,0 +1,329 @@
+[
+{
+  "model": "villages.village",
+  "pk": 1,
+  "fields": {
+    "name": "Piplantri",
+    "district": "Rajsamand",
+    "state": "Rajasthan",
+    "location": "SRID=4326;POINT (73.8347 25.0743)",
+    "boundary": null,
+    "area_hectares": 1050.0,
+    "population": 5120,
+    "created_at": "2026-11-07T00:33:01.850Z",
+    "updated_at": "2026-11-07T00:33:11.325Z"
+  }
+},
+{
+  "model": "villages.village",
+  "pk": 2,
+  "fields": {
+    "name": "Kothariya",
+    "district": "Rajsamand",
+    "state": "Rajasthan",
+    "location": "SRID=4326;POINT (73.8567 24.9667)",
+    "boundary": null,
+    "area_hectares": 1420.0,
+    "population": 4230,
+    "created_at": "2026-11-07T00:33:01.870Z",
+    "updated_at": "2026-11-07T00:33:11.332Z"
+  }
+},
+{
+  "model": "villages.village",
+  "pk": 3,
+  "fields": {
+    "name": "Mandawa",
+    "district": "Jhunjhunu",
+    "state": "Rajasthan",
+    "location": "SRID=4326;POINT (75.1432 28.0553)",
+    "boundary": null,
+    "area_hectares": 2100.0,
+    "population": 6500,
+    "created_at": "2026-11-07T00:33:01.876Z",
+    "updated_at": "2026-11-07T00:33:11.334Z"
+  }
+},
+{
+  "model": "villages.village",
+  "pk": 4,
+  "fields": {
+    "name": "Bhadla",
+    "district": "Phalodi",
+    "state": "Rajasthan",
+    "location": "SRID=4326;POINT (71.9167 27.5389)",
+    "boundary": null,
+    "area_hectares": 3500.0,
+    "population": 1800,
+    "created_at": "2026-11-07T00:33:01.879Z",
+    "updated_at": "2026-11-07T00:33:11.337Z"
+  }
+},
+{
+  "model": "villages.village",
+  "pk": 5,
+  "fields": {
+    "name": "Kuldhara",
+    "district": "Jaisalmer",
+    "state": "Rajasthan",
+    "location": "SRID=4326;POINT (70.7833 26.8667)",
+    "boundary": null,
+    "area_hectares": 1800.0,
+    "population": null,
+    "created_at": "2026-11-07T00:33:01.881Z",
+    "updated_at": "2026-11-07T00:33:11.338Z"
+  }
+},
+{
+  "model": "satellite.satellitescene",
+  "pk": 1,
+  "fields": {
+    "village": 1,
+    "provider": "AWS Earth Search (Element 84)",
+    "collection": "sentinel-2-l2a",
+    "scene_id": "S2B_43RCH_20240322_0_L2A",
+    "acquisition_date": "2024-03-22T05:52:09.280Z",
+    "cloud_cover": 0.000176,
+    "aoi_cloud_cover": 0.0,
+    "processing_level": "Level-2A",
+    "source_url": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/43/R/CH/2024/3/S2B_43RCH_20240322_0_L2A/thumbnail.jpg",
+    "aoi_geometry": "SRID=4326;POLYGON ((73.859484529 25.074492519, 73.859049107 25.070085083, 73.857678047 25.065839693, 73.855424127 25.061919478, 73.852374023 25.058475054, 73.848644975 25.055638744, 73.844380273 25.053519501, 73.839743756 25.052198727, 73.834913524 25.05172715, 73.8300751 25.052122879, 73.825414323 25.053370711, 73.821110218 25.055422713, 73.817328127 25.058200064, 73.81421337 25.061596074, 73.811885658 25.065480283, 73.810434495 25.069703461, 73.809915729 25.074103344, 73.810349394 25.078510859, 73.811718924 25.082756625, 73.813971776 25.086677457, 73.817021435 25.090122644, 73.820750731 25.092959747, 73.825016333 25.095079692, 73.829654267 25.096400971, 73.834486218 25.096872779, 73.8393264 25.096476972, 73.843988706 25.095228764, 73.848293879 25.093176145, 73.852076414 25.090398031, 73.855190925 25.087001228, 73.857517736 25.083116317, 73.858967482 25.078892633, 73.859484529 25.074492519))",
+    "is_provisional_aoi": true,
+    "status": "completed",
+    "error_message": null,
+    "created_at": "2026-11-07T05:32:02.820Z",
+    "updated_at": "2026-11-07T05:35:15.849Z"
+  }
+},
+{
+  "model": "satellite.satellitescene",
+  "pk": 2,
+  "fields": {
+    "village": 4,
+    "provider": "AWS Earth Search (Element 84)",
+    "collection": "sentinel-2-l2a",
+    "scene_id": "S2A_42RYR_20240330_0_L2A",
+    "acquisition_date": "2024-03-30T06:01:29.319Z",
+    "cloud_cover": 1.153351,
+    "aoi_cloud_cover": 0.0,
+    "processing_level": "Level-2A",
+    "source_url": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/42/R/YR/2024/3/S2A_42RYR_20240330_0_L2A/thumbnail.jpg",
+    "aoi_geometry": "SRID=4326;POLYGON ((71.941986283 27.53836672, 71.941383239 27.533979694, 71.93983178 27.529781815, 71.937391614 27.525934368, 71.934156567 27.52258516, 71.930250967 27.519862848, 71.925824866 27.517872003, 71.92104828 27.516689096, 71.916104668 27.516359567, 71.911183895 27.516896082, 71.906474954 27.518278042, 71.902158721 27.520452378, 71.898401016 27.523335578, 71.895346239 27.526816895, 71.893111818 27.530762588, 71.891783699 27.535021064, 71.891413024 27.53942869, 71.892014152 27.543816082, 71.893564092 27.548014614, 71.896003366 27.551862902, 71.899238286 27.55521301, 71.903144543 27.557936145, 71.907571985 27.559927611, 71.91235039 27.561110842, 71.917296025 27.561440348, 71.922218715 27.560903468, 71.926929175 27.559520854, 71.931246298 27.557345678, 71.93500413 27.554461577, 71.938058251 27.550979437, 71.940291331 27.547033123, 71.94161763 27.542774323, 71.941986283 27.53836672))",
+    "is_provisional_aoi": true,
+    "status": "completed",
+    "error_message": null,
+    "created_at": "2026-11-07T05:48:46.979Z",
+    "updated_at": "2026-11-07T05:49:21.423Z"
+  }
+},
+{
+  "model": "satellite.satelliteband",
+  "pk": 1,
+  "fields": {
+    "scene": 1,
+    "band_name": "B02",
+    "file_path": "satellite/villages/1/S2B_43RCH_20240322_0_L2A/B02.tif",
+    "resolution": 10.0,
+    "crs": "PROJCS[\"WGS 84 / UTM zone 43N\",GEOGCS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"",
+    "width": 505,
+    "height": 496,
+    "file_size": 375850,
+    "created_at": "2026-11-07T05:34:53.169Z"
+  }
+},
+{
+  "model": "satellite.satelliteband",
+  "pk": 2,
+  "fields": {
+    "scene": 1,
+    "band_name": "B03",
+    "file_path": "satellite/villages/1/S2B_43RCH_20240322_0_L2A/B03.tif",
+    "resolution": 10.0,
+    "crs": "PROJCS[\"WGS 84 / UTM zone 43N\",GEOGCS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"",
+    "width": 505,
+    "height": 496,
+    "file_size": 374056,
+    "created_at": "2026-11-07T05:34:57.036Z"
+  }
+},
+{
+  "model": "satellite.satelliteband",
+  "pk": 3,
+  "fields": {
+    "scene": 1,
+    "band_name": "B04",
+    "file_path": "satellite/villages/1/S2B_43RCH_20240322_0_L2A/B04.tif",
+    "resolution": 10.0,
+    "crs": "PROJCS[\"WGS 84 / UTM zone 43N\",GEOGCS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"",
+    "width": 505,
+    "height": 496,
+    "file_size": 396124,
+    "created_at": "2026-11-07T05:35:00.834Z"
+  }
+},
+{
+  "model": "satellite.satelliteband",
+  "pk": 4,
+  "fields": {
+    "scene": 1,
+    "band_name": "B08",
+    "file_path": "satellite/villages/1/S2B_43RCH_20240322_0_L2A/B08.tif",
+    "resolution": 10.0,
+    "crs": "PROJCS[\"WGS 84 / UTM zone 43N\",GEOGCS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"",
+    "width": 505,
+    "height": 496,
+    "file_size": 397606,
+    "created_at": "2026-11-07T05:35:04.765Z"
+  }
+},
+{
+  "model": "satellite.satelliteband",
+  "pk": 5,
+  "fields": {
+    "scene": 1,
+    "band_name": "B11",
+    "file_path": "satellite/villages/1/S2B_43RCH_20240322_0_L2A/B11.tif",
+    "resolution": 20.0,
+    "crs": "PROJCS[\"WGS 84 / UTM zone 43N\",GEOGCS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"",
+    "width": 253,
+    "height": 248,
+    "file_size": 103468,
+    "created_at": "2026-11-07T05:35:08.629Z"
+  }
+},
+{
+  "model": "satellite.satelliteband",
+  "pk": 6,
+  "fields": {
+    "scene": 1,
+    "band_name": "B12",
+    "file_path": "satellite/villages/1/S2B_43RCH_20240322_0_L2A/B12.tif",
+    "resolution": 20.0,
+    "crs": "PROJCS[\"WGS 84 / UTM zone 43N\",GEOGCS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"",
+    "width": 253,
+    "height": 248,
+    "file_size": 104366,
+    "created_at": "2026-11-07T05:35:12.292Z"
+  }
+},
+{
+  "model": "satellite.satelliteband",
+  "pk": 7,
+  "fields": {
+    "scene": 1,
+    "band_name": "SCL",
+    "file_path": "satellite/villages/1/S2B_43RCH_20240322_0_L2A/SCL.tif",
+    "resolution": 20.0,
+    "crs": "PROJCS[\"WGS 84 / UTM zone 43N\",GEOGCS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"",
+    "width": 253,
+    "height": 248,
+    "file_size": 5494,
+    "created_at": "2026-11-07T05:35:15.848Z"
+  }
+},
+{
+  "model": "satellite.satelliteband",
+  "pk": 8,
+  "fields": {
+    "scene": 2,
+    "band_name": "B02",
+    "file_path": "satellite/villages/4/S2A_42RYR_20240330_0_L2A/B02.tif",
+    "resolution": 10.0,
+    "crs": "PROJCS[\"WGS 84 / UTM zone 42N\",GEOGCS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"",
+    "width": 488,
+    "height": 512,
+    "file_size": 347461,
+    "created_at": "2026-11-07T05:48:54.573Z"
+  }
+},
+{
+  "model": "satellite.satelliteband",
+  "pk": 9,
+  "fields": {
+    "scene": 2,
+    "band_name": "B03",
+    "file_path": "satellite/villages/4/S2A_42RYR_20240330_0_L2A/B03.tif",
+    "resolution": 10.0,
+    "crs": "PROJCS[\"WGS 84 / UTM zone 42N\",GEOGCS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"",
+    "width": 488,
+    "height": 512,
+    "file_size": 355199,
+    "created_at": "2026-11-07T05:48:59.413Z"
+  }
+},
+{
+  "model": "satellite.satelliteband",
+  "pk": 10,
+  "fields": {
+    "scene": 2,
+    "band_name": "B04",
+    "file_path": "satellite/villages/4/S2A_42RYR_20240330_0_L2A/B04.tif",
+    "resolution": 10.0,
+    "crs": "PROJCS[\"WGS 84 / UTM zone 42N\",GEOGCS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"",
+    "width": 488,
+    "height": 512,
+    "file_size": 363579,
+    "created_at": "2026-11-07T05:49:04.129Z"
+  }
+},
+{
+  "model": "satellite.satelliteband",
+  "pk": 11,
+  "fields": {
+    "scene": 2,
+    "band_name": "B08",
+    "file_path": "satellite/villages/4/S2A_42RYR_20240330_0_L2A/B08.tif",
+    "resolution": 10.0,
+    "crs": "PROJCS[\"WGS 84 / UTM zone 42N\",GEOGCS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"",
+    "width": 488,
+    "height": 512,
+    "file_size": 342852,
+    "created_at": "2026-11-07T05:49:08.395Z"
+  }
+},
+{
+  "model": "satellite.satelliteband",
+  "pk": 12,
+  "fields": {
+    "scene": 2,
+    "band_name": "B11",
+    "file_path": "satellite/villages/4/S2A_42RYR_20240330_0_L2A/B11.tif",
+    "resolution": 20.0,
+    "crs": "PROJCS[\"WGS 84 / UTM zone 42N\",GEOGCS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"",
+    "width": 244,
+    "height": 256,
+    "file_size": 97446,
+    "created_at": "2026-11-07T05:49:12.521Z"
+  }
+},
+{
+  "model": "satellite.satelliteband",
+  "pk": 13,
+  "fields": {
+    "scene": 2,
+    "band_name": "B12",
+    "file_path": "satellite/villages/4/S2A_42RYR_20240330_0_L2A/B12.tif",
+    "resolution": 20.0,
+    "crs": "PROJCS[\"WGS 84 / UTM zone 42N\",GEOGCS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"",
+    "width": 244,
+    "height": 256,
+    "file_size": 99405,
+    "created_at": "2026-11-07T05:49:17.809Z"
+  }
+},
+{
+  "model": "satellite.satelliteband",
+  "pk": 14,
+  "fields": {
+    "scene": 2,
+    "band_name": "SCL",
+    "file_path": "satellite/villages/4/S2A_42RYR_20240330_0_L2A/SCL.tif",
+    "resolution": 20.0,
+    "crs": "PROJCS[\"WGS 84 / UTM zone 42N\",GEOGCS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"",
+    "width": 244,
+    "height": 256,
+    "file_size": 1334,
+    "created_at": "2026-11-07T05:49:21.420Z"
+  }
+}
+]

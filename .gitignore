@@ -1,0 +1,35 @@
+# Environment & Secrets
+.env
+.env.*
+*.env
+backend/.env
+backend/.env.*
+
+# Python
+backend/venv/
+backend/.venv/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.sqlite3
+
+# Node & Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Static & Media
+backend/media/
+backend/staticfiles/
+backend/cache/
+
+# Large External Datasets (>100MB exceeds GitHub push limits)
+data/boundaries/vb_soi_rj.*
+data/boundaries/vb_soi_rj_*
+*.zip
+
+# Logs & OS artifacts
+*.log
+.DS_Store
+Thumbs.db
+
