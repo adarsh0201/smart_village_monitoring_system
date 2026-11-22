@@ -55,6 +55,15 @@ DISTRICT_SYNONYMS = {
     "varanasi": ["varanasi", "banaras", "kashi"],
 }
 
+# Known survey / transliteration synonyms for pilot villages
+NAME_ALIASES = {
+    "juggaur": ["juggaur", "jugor", "jugaur"],
+    "dumri khas": ["dumri khas", "dumri"],
+    "bhatkaon": ["bhatkaon", "bhatkauli", "bhatkawan"],
+    "bhadla": ["bhadla", "bhadlachuhron ki basti"],
+    "kuldhara": ["kuldhara", "kuldhar"],
+}
+
 
 def haversine_distance_km(lon1, lat1, lon2, lat2):
     """Calculate great-circle distance between two WGS84 coordinates in km."""
@@ -268,20 +277,21 @@ class Command(BaseCommand):
                 # STEP 2: NAME MATCHING WITHIN DISTRICT SUBSET
                 # -------------------------------------------------------------
                 target_clean = village.name.strip().lower()
+                target_aliases = [target_clean] + NAME_ALIASES.get(target_clean, [])
                 candidate_rows = []
 
                 for idx, row in district_subset.iterrows():
                     shp_name = str(row[name_field]).strip()
                     shp_lower = shp_name.lower()
 
-                    # Exact match
-                    if shp_lower == target_clean:
-                        candidate_rows.append((row, 1.0, "Exact Match"))
-                    # Prefix / Contains match (e.g. "Piplantri Khurd" contains "Piplantri")
-                    elif target_clean in shp_lower:
+                    # Exact or alias match
+                    if any(shp_lower == alias for alias in target_aliases):
+                        candidate_rows.append((row, 1.0, f"Exact/Alias Match ('{shp_name}')"))
+                    # Prefix / Contains match (either direction)
+                    elif any(alias in shp_lower or shp_lower in alias for alias in target_aliases):
                         candidate_rows.append((row, 0.9, f"Contains ('{shp_name}')"))
                     elif enable_fuzzy:
-                        sim = difflib.SequenceMatcher(None, target_clean, shp_lower).ratio()
+                        sim = max(difflib.SequenceMatcher(None, alias, shp_lower).ratio() for alias in target_aliases)
                         if sim >= 0.70 and len(shp_lower) >= (len(target_clean) - 2):
                             candidate_rows.append((row, sim, f"Fuzzy ({sim:.2f})"))
 

@@ -1,216 +1,207 @@
 """
 Django Management Command: seed_up_villages
 
-Seeds 15 diverse pilot monitoring villages across Uttar Pradesh (UP) into PostgreSQL/PostGIS.
-Spans Purvanchal (Eastern Gangetic Plain), Awadh (Central UP), Bundelkhand (Drought-Prone),
-Terai (Sub-Himalayan Wetlands), and Western UP (Canal-Irrigated Agro-Industrial).
+Seeds the 15 pilot monitoring villages from Uttar Pradesh into PostgreSQL/PostGIS.
+Covers Ghazipur, Etawah, Lucknow, Gorakhpur, Deoria, and Barabanki.
 
 Every record includes:
-- Exact Village Name.
-- Official Uttar Pradesh District Name (for pre-filtering state-wide Bhuvan datasets).
-- State: 'Uttar Pradesh'.
-- Verified Point location (EPSG:4326: Lon, Lat).
-- Revenue Area estimate in hectares.
-- Census population estimate.
-- Agro-ecological remote sensing monitoring notes.
+- Exact Village Name
+- Accurate District Name (to filter state-wide datasets and prevent spatial false positives)
+- State: 'Uttar Pradesh'
+- Verified Coordinates (EPSG:4326: Lon, Lat)
+- Area & Population estimates
+- Remote sensing monitoring notes
 
-Idempotent: Uses update_or_create to prevent duplicates.
+Idempotent: Uses update_or_create to prevent duplicate entries.
 """
 
 from django.core.management.base import BaseCommand
 from django.contrib.gis.geos import Point
 from villages.models import Village
 
-# 15 Diverse Pilot Monitoring Villages across Uttar Pradesh
 UP_PILOT_VILLAGES = [
-    # -------------------------------------------------------------------------
-    # 1. PURVANCHAL (EASTERN GANGETIC PLAIN)
-    # -------------------------------------------------------------------------
     {
-        "name": "Rameshwar",
-        "district": "Varanasi",
+        "name": "Gahmar",
+        "district": "Ghazipur",
         "state": "Uttar Pradesh",
-        "longitude": 82.8805,
-        "latitude": 25.3340,
-        "area_hectares": 480.0,
-        "population": 3650,
-        "notes": "Varuna River basin peri-urban agrarian belt; monitored for surface water pollution and riverbank erosion",
+        "longitude": 83.80838,
+        "latitude": 25.49801,
+        "area_hectares": 3450.0,
+        "population": 25994,
+        "notes": "Historic Ganga riverbank village, one of the largest villages in India; intensive alluvial agriculture and flood monitoring",
     },
     {
-        "name": "Shringverpur",
-        "district": "Prayagraj",
+        "name": "Saifai",
+        "district": "Etawah",
         "state": "Uttar Pradesh",
-        "longitude": 81.6420,
-        "latitude": 25.5890,
-        "area_hectares": 820.0,
-        "population": 5890,
-        "notes": "Ganga alluvial floodplain; intensive paddy-wheat rotation monitored for flood inundation and soil siltation",
-    },
-    {
-        "name": "Kushmi",
-        "district": "Gorakhpur",
-        "state": "Uttar Pradesh",
-        "longitude": 83.4750,
-        "latitude": 26.7450,
-        "area_hectares": 640.0,
-        "population": 4120,
-        "notes": "Rapti-Rohini interfluve and Sal forest fringe; monitored for seasonal waterlogging, wetlands, and paddy canopy",
-    },
-    {
-        "name": "Ahraura",
-        "district": "Mirzapur",
-        "state": "Uttar Pradesh",
-        "longitude": 83.0210,
-        "latitude": 25.0160,
-        "area_hectares": 950.0,
-        "population": 6200,
-        "notes": "Vindhyan plateau foothills; monitored for stony scrubland reclamation, minor reservoir recharge, and irrigation canals",
-    },
-    {
-        "name": "Robertsganj",
-        "district": "Sonbhadra",
-        "state": "Uttar Pradesh",
-        "longitude": 83.0670,
-        "latitude": 24.6850,
+        "longitude": 78.96255,
+        "latitude": 26.95911,
         "area_hectares": 1250.0,
-        "population": 7800,
-        "notes": "Southern Sonbhadra mineral and forested belt; monitored for mining dust land-cover alteration and forest degradation",
-    },
-
-    # -------------------------------------------------------------------------
-    # 2. AWADH (CENTRAL UTTAR PRADESH)
-    # -------------------------------------------------------------------------
-    {
-        "name": "Bikapur",
-        "district": "Ayodhya",
-        "state": "Uttar Pradesh",
-        "longitude": 82.1330,
-        "latitude": 26.6020,
-        "area_hectares": 710.0,
-        "population": 5400,
-        "notes": "Ghaghra (Saryu) tributary basin; high-yield sugarcane, pulse farming, and groundwater drawdown monitoring",
+        "population": 7141,
+        "notes": "Canal-irrigated central Doab agrarian hub with developed infrastructure; agricultural land-use monitoring",
     },
     {
-        "name": "Mohanlalganj",
+        "name": "Juggaur",
         "district": "Lucknow",
         "state": "Uttar Pradesh",
-        "longitude": 80.9980,
-        "latitude": 26.6850,
-        "area_hectares": 890.0,
-        "population": 6750,
-        "notes": "State capital peri-urban fringe; rapid urban sprawl transition, brick kilns, and fertile mango orchard land use",
+        "longitude": 81.08373,
+        "latitude": 26.87307,
+        "area_hectares": 820.0,
+        "population": 6200,
+        "notes": "Chinhat peri-urban agrarian-wetland corridor in Lucknow; monitored for urban expansion and water body conservation",
     },
     {
-        "name": "Masauli",
+        "name": "Itaunja",
+        "district": "Lucknow",
+        "state": "Uttar Pradesh",
+        "longitude": 80.90218,
+        "latitude": 27.08300,
+        "area_hectares": 950.0,
+        "population": 7800,
+        "notes": "Northern Lucknow Gomti basin agricultural belt; intensive horticulture and mango belt monitoring",
+    },
+    {
+        "name": "Dumri Khas",
+        "district": "Gorakhpur",
+        "state": "Uttar Pradesh",
+        "longitude": 83.14352,
+        "latitude": 26.85509,
+        "area_hectares": 780.0,
+        "population": 5400,
+        "notes": "Rapti river basin agricultural tract; seasonal waterlogging and paddy cultivation monitoring",
+    },
+    {
+        "name": "Bhatkaon",
+        "district": "Gorakhpur",
+        "state": "Uttar Pradesh",
+        "longitude": 83.46495,
+        "latitude": 26.41787,
+        "area_hectares": 620.0,
+        "population": 4300,
+        "notes": "Southern Gorakhpur agrarian belt; monitored for seasonal drainage, sugarcane crops, and groundwater recharge",
+    },
+    {
+        "name": "Chainpur",
+        "district": "Deoria",
+        "state": "Uttar Pradesh",
+        "longitude": 83.75289,
+        "latitude": 26.68885,
+        "area_hectares": 580.0,
+        "population": 3900,
+        "notes": "Eastern Terai fringe in Deoria; high-density sugarcane and paddy rotation tract",
+    },
+    {
+        "name": "Sonbarsa",
+        "district": "Deoria",
+        "state": "Uttar Pradesh",
+        "longitude": 83.58766,
+        "latitude": 26.40963,
+        "area_hectares": 650.0,
+        "population": 4600,
+        "notes": "Ghaghra floodplain agricultural belt in southern Deoria; siltation and soil moisture monitoring",
+    },
+    {
+        "name": "Atirajpur",
+        "district": "Etawah",
+        "state": "Uttar Pradesh",
+        "longitude": 78.97264,
+        "latitude": 26.97089,
+        "area_hectares": 480.0,
+        "population": 2800,
+        "notes": "Etawah Doab agricultural tract; wheat and mustard crop canopy and canal irrigation monitoring",
+    },
+    {
+        "name": "Baidpura",
+        "district": "Etawah",
+        "state": "Uttar Pradesh",
+        "longitude": 78.99396,
+        "latitude": 26.86807,
+        "area_hectares": 690.0,
+        "population": 4200,
+        "notes": "Central Etawah semi-arid Doab belt; groundwater drawdown and pulse cultivation monitoring",
+    },
+    {
+        "name": "Parasana",
+        "district": "Etawah",
+        "state": "Uttar Pradesh",
+        "longitude": 79.09894,
+        "latitude": 26.97240,
+        "area_hectares": 520.0,
+        "population": 3100,
+        "notes": "Etawah eastern agrarian perimeter; canal network water distribution and soil salinity monitoring",
+    },
+    {
+        "name": "Phoolpur",
+        "district": "Etawah",
+        "state": "Uttar Pradesh",
+        "longitude": 79.01461,
+        "latitude": 26.84605,
+        "area_hectares": 440.0,
+        "population": 2600,
+        "notes": "Sengur river catchment zone in southern Etawah; ravines and soil erosion monitoring",
+    },
+    {
+        "name": "Tulsipur",
+        "district": "Etawah",
+        "state": "Uttar Pradesh",
+        "longitude": 79.05970,
+        "latitude": 26.89497,
+        "area_hectares": 510.0,
+        "population": 3400,
+        "notes": "Canal-fed agrarian village in Etawah; intensive seasonal cropping and vegetation vigor",
+    },
+    {
+        "name": "Ujhiyani",
+        "district": "Etawah",
+        "state": "Uttar Pradesh",
+        "longitude": 78.99073,
+        "latitude": 26.95198,
+        "area_hectares": 610.0,
+        "population": 3700,
+        "notes": "Etawah northwest agricultural tract; multi-crop seasonal rotations and crop residue monitoring",
+    },
+    {
+        "name": "Haswapara",
         "district": "Barabanki",
         "state": "Uttar Pradesh",
-        "longitude": 81.2850,
-        "latitude": 27.0120,
-        "area_hectares": 620.0,
-        "population": 4900,
-        "notes": "Major commercial mentha (peppermint) and seasonal cash crop cultivation monitored for high soil moisture evapotranspiration",
-    },
-    {
-        "name": "Tirwa",
-        "district": "Kannauj",
-        "state": "Uttar Pradesh",
-        "longitude": 79.7650,
-        "latitude": 26.9850,
-        "area_hectares": 780.0,
-        "population": 5300,
-        "notes": "Lower Gangetic Doab; famous rose/damask floriculture and intensive cold-storage potato crop health analytics",
-    },
-
-    # -------------------------------------------------------------------------
-    # 3. BUNDELKHAND (SEMI-ARID DROUGHT-PRONE HARD-ROCK ZONE)
-    # -------------------------------------------------------------------------
-    {
-        "name": "Baruasagar",
-        "district": "Jhansi",
-        "state": "Uttar Pradesh",
-        "longitude": 78.7350,
-        "latitude": 25.3720,
-        "area_hectares": 1100.0,
-        "population": 4800,
-        "notes": "Bundelkhand granitic hard-rock terrain; historic Bundela embankment lake monitored for drought stress and reservoir shrinkage",
-    },
-    {
-        "name": "Kulpahar",
-        "district": "Mahoba",
-        "state": "Uttar Pradesh",
-        "longitude": 79.6450,
-        "latitude": 25.3150,
-        "area_hectares": 1350.0,
-        "population": 5900,
-        "notes": "Water-scarce Bundelkhand basin; Chandela-era traditional rainwater storage tanks and barren scrubland desertification tracking",
-    },
-
-    # -------------------------------------------------------------------------
-    # 4. TERAI & ROHILKHAND (NORTHERN SUB-HIMALAYAN & WETLAND ZONE)
-    # -------------------------------------------------------------------------
-    {
-        "name": "Palia Kalan",
-        "district": "Lakhimpur Kheri",
-        "state": "Uttar Pradesh",
-        "longitude": 80.5820,
-        "latitude": 28.4350,
-        "area_hectares": 1600.0,
-        "population": 8400,
-        "notes": "Dudhwa Terai marshland corridor; Sharda River floods, high soil moisture, and dense commercial sugarcane plantations",
-    },
-    {
-        "name": "Joya",
-        "district": "Amroha",
-        "state": "Uttar Pradesh",
-        "longitude": 78.5020,
-        "latitude": 28.8850,
-        "area_hectares": 540.0,
-        "population": 4300,
-        "notes": "Rohilkhand agricultural zone; commercial mango groves, multi-tier horticulture, and tube-well depth monitoring",
-    },
-
-    # -------------------------------------------------------------------------
-    # 5. WESTERN UTTAR PRADESH (UPPER DOAB & BRAJ REGION)
-    # -------------------------------------------------------------------------
-    {
-        "name": "Hastinapur",
-        "district": "Meerut",
-        "state": "Uttar Pradesh",
-        "longitude": 78.0200,
-        "latitude": 29.1700,
-        "area_hectares": 1420.0,
-        "population": 7200,
-        "notes": "Upper Ganga Canal irrigated belt and Hastinapur Wildlife Sanctuary wetlands; intensive mechanized cash-crop agriculture",
-    },
-    {
-        "name": "Goverdhan",
-        "district": "Mathura",
-        "state": "Uttar Pradesh",
-        "longitude": 77.4650,
-        "latitude": 27.5020,
-        "area_hectares": 980.0,
-        "population": 6100,
-        "notes": "Yamuna basin semi-arid saline soil tract; sacred community groves (Braj Van), kund water tanks, and crop salinity monitoring",
+        "longitude": 81.07401,
+        "latitude": 27.19860,
+        "area_hectares": 470.0,
+        "population": 2950,
+        "notes": "Barabanki Gomti-Kalyani interfluve; mentha, pulse, and cereal multi-tier farming monitoring",
     },
 ]
 
 
 class Command(BaseCommand):
-    help = "Seed 15 diverse pilot monitoring villages across Uttar Pradesh with accurate district names"
+    help = "Seed the 15 pilot monitoring villages from Uttar Pradesh with accurate district names"
 
     def add_arguments(self, parser):
         parser.add_argument(
             "--generate-provisional-buffers",
             action="store_true",
-            help="Generate 1.5 km provisional polygonal buffers so villages render immediately on GIS map before Bhuvan GeoJSON is loaded"
+            help="Generate 1.5 km provisional polygonal buffers so villages render immediately on GIS map before shapefile is loaded"
+        )
+        parser.add_argument(
+            "--clean-old-up",
+            action="store_true",
+            help="Clean previous experimental UP records before seeding the 15 user-selected villages"
         )
 
     def handle(self, *args, **options):
         gen_buffers = options["generate_provisional_buffers"]
+        clean_old = options["clean_old_up"]
 
         self.stdout.write("=" * 80)
         self.stdout.write("SEEDING 15 PILOT MONITORING VILLAGES ACROSS UTTAR PRADESH")
         self.stdout.write("=" * 80)
+
+        target_names = [v["name"] for v in UP_PILOT_VILLAGES]
+
+        if clean_old:
+            deleted_count, _ = Village.objects.filter(state="Uttar Pradesh").exclude(name__in=target_names).delete()
+            if deleted_count > 0:
+                self.stdout.write(self.style.WARNING(f"Cleaned {deleted_count} previous non-target UP village record(s)."))
 
         created_count = 0
         updated_count = 0
@@ -250,26 +241,19 @@ class Command(BaseCommand):
             )
 
             status_symbol = "[+]" if created else "[*]"
-            status_word = "Created" if created else "Updated"
+            status_text = "Created" if created else "Updated"
             if created:
                 created_count += 1
             else:
                 updated_count += 1
 
-            self.stdout.write(self.style.SUCCESS(
-                f"  {status_symbol} {status_word}: {village.name:<14} | District: {village.district:<16} | "
-                f"Coords: [{lon:.4f}, {lat:.4f}] | Area: {village.area_hectares} ha"
-            ))
+            self.stdout.write(
+                f"  {status_symbol} {status_text}: {village.name:<15} | District: {village.district:<12} | [{lon:.5f}, {lat:.5f}]"
+            )
 
         self.stdout.write("=" * 80)
         self.stdout.write(self.style.SUCCESS(
-            f"Seeding Complete: {created_count} created, {updated_count} updated.\n"
-            f"Total villages in database: {Village.objects.count()} (5 Rajasthan + 15 Uttar Pradesh)"
+            f"Seeding complete! {created_count} created, {updated_count} updated.\n"
+            f"Total UP villages: {Village.objects.filter(state='Uttar Pradesh').count()} | Total DB villages: {Village.objects.count()}"
         ))
-        self.stdout.write("=" * 80)
-        self.stdout.write(
-            "TIP: Once you download the UP Bhuvan GeoJSON file, run:\n"
-            "python manage.py load_village_shapefile --file \"path/to/up_bhuvan.geojson\" --fuzzy\n"
-            "The script will automatically use each village's populated District Name to filter the state dataset!"
-        )
         self.stdout.write("=" * 80)
