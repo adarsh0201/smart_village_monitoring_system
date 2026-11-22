@@ -39,13 +39,20 @@ CANDIDATE_DISTRICT_FIELDS = [
     "dist_name_", "ds_name", "district_head_quarter"
 ]
 
-# District mapping for administrative reorganizations in Rajasthan
+# District mapping for administrative reorganizations and state-specific aliases
 DISTRICT_SYNONYMS = {
+    # Rajasthan
     "rajsamand": ["rajsamand"],
     "jhunjhunu": ["jhunjhunu", "jhunjhunun"],
     "jaisalmer": ["jaisalmer"],
     "phalodi": ["phalodi", "jodhpur", "jaisalmer", "bikaner"],  # Bap tehsil / Phalodi historical borders
     "bhadla": ["phalodi", "jodhpur", "jaisalmer", "bikaner"],
+    # Uttar Pradesh
+    "lakhimpur kheri": ["lakhimpur kheri", "kheri", "lakhimpur"],
+    "prayagraj": ["prayagraj", "allahabad"],
+    "ayodhya": ["ayodhya", "faizabad"],
+    "amroha": ["amroha", "jyotiba phule nagar"],
+    "varanasi": ["varanasi", "banaras", "kashi"],
 }
 
 
