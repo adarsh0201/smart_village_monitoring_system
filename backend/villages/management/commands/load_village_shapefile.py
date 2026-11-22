@@ -124,6 +124,12 @@ class Command(BaseCommand):
             help="Target a specific village name (e.g. --village Piplantri)"
         )
         parser.add_argument(
+            "--state",
+            type=str,
+            default=None,
+            help="Target villages by state name (e.g. --state 'Uttar Pradesh')"
+        )
+        parser.add_argument(
             "--fuzzy",
             action="store_true",
             help="Enable fuzzy matching for spelling variants (e.g. 'Piplantri Khurd')"
@@ -142,6 +148,7 @@ class Command(BaseCommand):
         cli_district = options["district"]
         max_dist_km = options["max_distance_km"]
         target_village = options["village"]
+        target_state = options.get("state")
         enable_fuzzy = options["fuzzy"]
         dry_run = options["dry_run"]
 
@@ -223,6 +230,10 @@ class Command(BaseCommand):
 
         # 4. Target villages in database
         db_villages = list(Village.objects.all())
+        if target_state:
+            db_villages = [v for v in db_villages if target_state.lower() in (v.state or "").lower()]
+            if not db_villages:
+                raise CommandError(f"No villages found in database for state '{target_state}'.")
         if target_village:
             db_villages = [v for v in db_villages if v.name.lower() == target_village.lower()]
             if not db_villages:
