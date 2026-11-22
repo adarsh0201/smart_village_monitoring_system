@@ -361,9 +361,10 @@ class Command(BaseCommand):
 
                 village.boundary = multipoly
                 village.area_hectares = area_ha
+                village.location = multipoly.centroid
 
                 if not dry_run:
-                    village.save(update_fields=["boundary", "area_hectares"])
+                    village.save(update_fields=["boundary", "area_hectares", "location", "updated_at"])
 
                 self.stdout.write(self.style.SUCCESS(
                     f"  ✓ VERIFIED & COMMITTED: '{village.name}' -> '{shp_vname}'\n"
