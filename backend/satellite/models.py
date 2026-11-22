@@ -117,6 +117,8 @@ class SatelliteBand(models.Model):
         ('B11', 'B11 - Shortwave Infrared 1 / SWIR 1 (20m)'),
         ('B12', 'B12 - Shortwave Infrared 2 / SWIR 2 (20m)'),
         ('SCL', 'SCL - Scene Classification Layer (20m)'),
+        ('VV', 'VV - C-SAR Co-Polarization (10m)'),
+        ('VH', 'VH - C-SAR Cross-Polarization (10m)'),
     ]
 
     scene = models.ForeignKey(
@@ -186,6 +188,8 @@ class SpectralIndex(models.Model):
         ('NDWI', 'NDWI - Normalized Difference Water Index (McFeeters)'),
         ('SAVI', 'SAVI - Soil-Adjusted Vegetation Index'),
         ('MNDWI', 'MNDWI - Modified Normalized Difference Water Index (Xu)'),
+        ('SAR_CR', 'SAR_CR - Dual-Pol Cross-Ratio (VH/VV) in dB'),
+        ('RVI', 'RVI - Radar Vegetation Index'),
     ]
 
     STATUS_CHOICES = [

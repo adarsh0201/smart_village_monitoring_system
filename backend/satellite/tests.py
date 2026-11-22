@@ -246,3 +246,64 @@ class SpectralIndicesAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['indices_count'], 1)
         self.assertEqual(response.data['indices'][0]['index_type'], "NDVI")
+
+
+class Sentinel1SARPipelineUnitTests(TestCase):
+    """
+    Tests radiometric calibration, dual-polarization cross-ratio, and RVI metrics.
+    """
+    def setUp(self):
+        self.village = Village.objects.create(
+            name="Gahmar Test",
+            district="Ghazipur",
+            state="Uttar Pradesh",
+            location=Point(83.80838, 25.49801, srid=4326),
+            area_hectares=3450.0,
+            population=25994
+        )
+
+    def test_calibrate_linear_to_db(self):
+        from satellite.services.sar_ingestion import calibrate_linear_to_db
+        # 1.0 in linear -> 0.0 dB (10 * log10(1))
+        # 0.1 in linear -> -10.0 dB (10 * log10(0.1))
+        # 0.01 in linear -> -20.0 dB (10 * log10(0.01))
+        linear_input = np.array([[1.0, 0.1], [0.01, 0.0]], dtype=np.float32)
+        db_out, nodata = calibrate_linear_to_db(linear_input, nodata_val=0.0)
+
+        self.assertAlmostEqual(float(db_out[0, 0]), 0.0, places=3)
+        self.assertAlmostEqual(float(db_out[0, 1]), -10.0, places=3)
+        self.assertAlmostEqual(float(db_out[1, 0]), -20.0, places=3)
+        self.assertEqual(float(db_out[1, 1]), nodata)
+
+    def test_compute_sar_cross_ratio(self):
+        from satellite.services.sar_ingestion import compute_sar_cross_ratio
+        # VH = -15 dB, VV = -10 dB -> CR = -15 - (-10) = -5 dB
+        vh_db = np.array([[-15.0, -18.0]], dtype=np.float32)
+        vv_db = np.array([[-10.0, -12.0]], dtype=np.float32)
+        cr_out = compute_sar_cross_ratio(vh_db, vv_db)
+
+        self.assertAlmostEqual(float(cr_out[0, 0]), -5.0, places=3)
+        self.assertAlmostEqual(float(cr_out[0, 1]), -6.0, places=3)
+
+    def test_compute_radar_vegetation_index(self):
+        from satellite.services.sar_ingestion import compute_radar_vegetation_index
+        # RVI = (4 * VH) / (VV + VH)
+        # If VV=0.1, VH=0.05 -> denom=0.15 -> 4 * 0.05 / 0.15 = 0.2 / 0.15 = 1.333
+        vv_linear = np.array([[0.1, 0.2]], dtype=np.float32)
+        vh_linear = np.array([[0.05, 0.05]], dtype=np.float32)
+        rvi_out = compute_radar_vegetation_index(vh_linear, vv_linear)
+
+        self.assertAlmostEqual(float(rvi_out[0, 0]), (4.0 * 0.05) / 0.15, places=3)
+        self.assertAlmostEqual(float(rvi_out[0, 1]), (4.0 * 0.05) / 0.25, places=3)
+
+    def test_calculate_sar_raster_statistics(self):
+        from satellite.services.sar_ingestion import calculate_sar_raster_statistics
+        data = np.array([[-12.0, -14.0], [-10.0, -9999.0]], dtype=np.float32)
+        stats = calculate_sar_raster_statistics(data, nodata_val=-9999.0)
+
+        self.assertEqual(stats["valid_count"], 3)
+        self.assertEqual(stats["total_count"], 4)
+        self.assertEqual(stats["min"], -14.0)
+        self.assertEqual(stats["max"], -10.0)
+        self.assertAlmostEqual(stats["mean"], -12.0, places=3)
+

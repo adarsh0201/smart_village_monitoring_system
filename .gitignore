@@ -26,6 +26,8 @@ backend/cache/
 # Large External Datasets (>100MB exceeds GitHub push limits)
 data/boundaries/vb_soi_rj.*
 data/boundaries/vb_soi_rj_*
+data/boundaries/vb_soi_up.*
+data/boundaries/vb_soi_up_*
 *.zip
 
 # Logs & OS artifacts
