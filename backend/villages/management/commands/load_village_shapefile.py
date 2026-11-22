@@ -355,7 +355,21 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.ERROR(f"  Failed to convert geometry to MultiPolygon."))
                     continue
 
-                utm_epsg = 32643 if village.location.x > 73.0 else 32642
+                # Dynamically choose UTM projection based on longitude for accurate area calculation:
+                # Zone 42N (32642): 66°E - 72°E (Western Thar)
+                # Zone 43N (32643): 72°E - 78°E (Central/Eastern Rajasthan, Western UP)
+                # Zone 44N (32644): 78°E - 84°E (Central & Eastern UP / Doab / Purvanchal)
+                # Zone 45N (32645): >= 84°E
+                lng = village.location.x
+                if lng < 72.0:
+                    utm_epsg = 32642
+                elif lng < 78.0:
+                    utm_epsg = 32643
+                elif lng < 84.0:
+                    utm_epsg = 32644
+                else:
+                    utm_epsg = 32645
+
                 projected_geom = multipoly.transform(utm_epsg, clone=True)
                 area_ha = round(projected_geom.area / 10000.0, 2)
 
