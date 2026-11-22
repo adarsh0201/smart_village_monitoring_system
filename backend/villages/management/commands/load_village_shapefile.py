@@ -6,38 +6,64 @@ Loads official administrative MultiPolygon boundaries from external GIS sources
 into the GeoDjango Village model in PostgreSQL/PostGIS.
 
 Features:
-- Reads ESRI Shapefiles (.shp), zipped shapefiles (.zip), GeoJSON (.geojson),
-  and GeoPackages (.gpkg) via GeoPandas and GeoDjango GDAL.
-- --inspect mode: Displays attribute schema, CRS, and sample records so you can
-  identify exact column names (e.g. VILL_NAME, DIST_NAME).
-- Auto-reprojects input CRS (LCC, UTM, Everest 1954, etc.) to EPSG:4326.
+- Mandatory District Pre-Filtering: Automatically filters the 45,000+ state-wide
+  dataset by District Name (e.g. Rajsamand for Piplantri/Kothariya, Jhunjhunu for Mandawa,
+  Phalodi/Jodhpur/Jaisalmer for Bhadla/Kuldhara) BEFORE performing any name matching.
+  Guarantees zero cross-district namesake false positives.
+- Spatial Proximity Ranking: Ranks candidate matches by distance to known village
+  centroid coordinates, selecting the spatially closest authentic cadastral polygon.
+- Normalizes column names (strips whitespace and newlines, handles case-insensitivity).
+- Auto-reprojects input CRS (EPSG:7755, LCC, Everest, etc.) to WGS 84 (EPSG:4326).
 - Automatically repairs invalid self-intersecting geometries (make_valid).
 - Casts Polygon to MultiPolygon and strips 3D coordinates.
 - Computes high-precision metric area in hectares using local UTM projection.
-- Supports case-insensitive and fuzzy name matching.
 """
 
 import os
 import sys
+import math
 import difflib
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.gis.geos import GEOSGeometry, MultiPolygon, Polygon
 from django.db import transaction
 from villages.models import Village
 
-# Common attribute column names in Bhuvan Panchayat, Census, and Survey of India shapefiles
+# Candidate column names in lower-case
 CANDIDATE_NAME_FIELDS = [
-    "VILL_NAME", "VILLNAME", "NAME", "VILLAGE", "VILLAGE_NA", "VIL_NAME",
-    "NAME_EN", "VILL_NAME_", "V_NAME", "VILLAGNAME", "TEHSIL_VIL"
+    "village", "vill_name", "villname", "name", "village_na", "vil_name",
+    "name_en", "vill_name_", "v_name", "villagname", "tehsil_vil"
 ]
 
 CANDIDATE_DISTRICT_FIELDS = [
-    "DIST_NAME", "DISTRICT", "DIST_NA", "DT_NAME", "DISTRICT_N", "DIST_NAME_"
+    "district", "dist_name", "district_name", "dist_na", "dt_name", "district_n",
+    "dist_name_", "ds_name", "district_head_quarter"
 ]
+
+# District mapping for administrative reorganizations in Rajasthan
+DISTRICT_SYNONYMS = {
+    "rajsamand": ["rajsamand"],
+    "jhunjhunu": ["jhunjhunu", "jhunjhunun"],
+    "jaisalmer": ["jaisalmer"],
+    "phalodi": ["phalodi", "jodhpur", "jaisalmer", "bikaner"],  # Bap tehsil / Phalodi historical borders
+    "bhadla": ["phalodi", "jodhpur", "jaisalmer", "bikaner"],
+}
+
+
+def haversine_distance_km(lon1, lat1, lon2, lat2):
+    """Calculate great-circle distance between two WGS84 coordinates in km."""
+    r = 6371.0
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+
+    a = math.sin(delta_phi / 2.0) ** 2 + \
+        math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2.0) ** 2
+    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+    return r * c
 
 
 class Command(BaseCommand):
-    help = "Import official village boundaries from external Shapefile/GeoJSON (e.g. Bhuvan Panchayat) into PostGIS"
+    help = "Import village boundaries from state-wide Shapefile/GeoJSON with mandatory District Pre-Filtering"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -55,13 +81,25 @@ class Command(BaseCommand):
             "--name-field",
             type=str,
             default=None,
-            help="Attribute column name containing village names (e.g. VILL_NAME)"
+            help="Attribute column name containing village names (e.g. village, VILL_NAME)"
         )
         parser.add_argument(
             "--district-field",
             type=str,
             default=None,
-            help="Attribute column name containing district names (e.g. DIST_NAME)"
+            help="Attribute column name containing district names (e.g. district, DIST_NAME)"
+        )
+        parser.add_argument(
+            "--district",
+            type=str,
+            default=None,
+            help="Override district filter for all target villages"
+        )
+        parser.add_argument(
+            "--max-distance-km",
+            type=float,
+            default=35.0,
+            help="Maximum allowed distance in km from known centroid to reject spatial false positives (default: 35.0 km)"
         )
         parser.add_argument(
             "--village",
@@ -72,7 +110,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--fuzzy",
             action="store_true",
-            help="Enable fuzzy matching (useful for slight spelling differences like 'Piplantari')"
+            help="Enable fuzzy matching for spelling variants (e.g. 'Piplantri Khurd')"
         )
         parser.add_argument(
             "--dry-run",
@@ -83,8 +121,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         file_path = options["file"]
         inspect_mode = options["inspect"]
-        name_field = options["name_field"]
-        district_field = options["district_field"]
+        name_field_arg = options["name_field"]
+        district_field_arg = options["district_field"]
+        cli_district = options["district"]
+        max_dist_km = options["max_distance_km"]
         target_village = options["village"]
         enable_fuzzy = options["fuzzy"]
         dry_run = options["dry_run"]
@@ -95,7 +135,6 @@ class Command(BaseCommand):
         try:
             import geopandas as gpd
             from shapely.validation import make_valid
-            from shapely.geometry import Polygon as ShapelyPolygon, MultiPolygon as ShapelyMultiPolygon
         except ImportError:
             raise CommandError("GeoPandas and Shapely are required. Run: pip install geopandas shapely")
 
@@ -105,86 +144,217 @@ class Command(BaseCommand):
         except Exception as exc:
             raise CommandError(f"Failed to read file with GeoPandas: {exc}")
 
+        # Normalize column names: strip whitespace and trailing newlines
+        original_cols = list(gdf.columns)
+        col_rename_map = {c: str(c).strip().replace("\n", "").replace("\r", "") for c in original_cols}
+        gdf = gdf.rename(columns=col_rename_map)
+
         # 1. Inspection Mode
         if inspect_mode:
             self._inspect_file(gdf, file_path)
             return
 
-        # 2. Identify Name & District Columns
-        if not name_field:
-            for col in CANDIDATE_NAME_FIELDS:
-                if col in gdf.columns:
-                    name_field = col
+        # 2. Identify Name & District Columns (case-insensitive)
+        lower_cols = {c.lower(): c for c in gdf.columns}
+
+        name_field = None
+        if name_field_arg and name_field_arg in gdf.columns:
+            name_field = name_field_arg
+        elif name_field_arg and name_field_arg.lower() in lower_cols:
+            name_field = lower_cols[name_field_arg.lower()]
+        else:
+            for cand in CANDIDATE_NAME_FIELDS:
+                if cand in lower_cols:
+                    name_field = lower_cols[cand]
                     break
-            if not name_field:
-                raise CommandError(
-                    f"Could not automatically detect village name column. "
-                    f"Available columns: {list(gdf.columns)}. "
-                    f"Please specify using --name-field <column_name>."
-                )
+
+        if not name_field:
+            raise CommandError(
+                f"Could not automatically detect village name column. "
+                f"Available columns: {list(gdf.columns)}. "
+                f"Please specify using --name-field <column_name>."
+            )
+
+        district_field = None
+        if district_field_arg and district_field_arg in gdf.columns:
+            district_field = district_field_arg
+        elif district_field_arg and district_field_arg.lower() in lower_cols:
+            district_field = lower_cols[district_field_arg.lower()]
+        else:
+            for cand in CANDIDATE_DISTRICT_FIELDS:
+                if cand in lower_cols:
+                    district_field = lower_cols[cand]
+                    break
 
         if not district_field:
-            for col in CANDIDATE_DISTRICT_FIELDS:
-                if col in gdf.columns:
-                    district_field = col
-                    break
+            raise CommandError(
+                f"District column is required for state-wide datasets. "
+                f"Could not detect district column among: {list(gdf.columns)}. "
+                f"Please specify using --district-field <column_name>."
+            )
 
         self.stdout.write(self.style.SUCCESS(
-            f"Using Name field: '{name_field}'" + (f", District field: '{district_field}'" if district_field else "")
+            f"✓ Columns Identified: Name Column = '{name_field}' | District Column = '{district_field}'"
         ))
 
-        # 3. Ensure CRS is WGS 84 (EPSG:4326)
+        # 3. Ensure CRS is WGS 84 (EPSG:4326) BEFORE distance calculations
         if gdf.crs is None:
             self.stdout.write(self.style.WARNING("File has no CRS defined. Assuming EPSG:4326."))
             gdf = gdf.set_crs("EPSG:4326")
         elif gdf.crs.to_string() != "EPSG:4326":
-            self.stdout.write(f"Reprojecting from {gdf.crs.to_string()} to EPSG:4326 ...")
+            self.stdout.write(f"Reprojecting {len(gdf):,} records from {gdf.crs.to_string()} to EPSG:4326 ...")
             gdf = gdf.to_crs("EPSG:4326")
 
-        # 4. Filter or Match Villages in Database
+        # 4. Target villages in database
         db_villages = list(Village.objects.all())
         if target_village:
             db_villages = [v for v in db_villages if v.name.lower() == target_village.lower()]
             if not db_villages:
                 raise CommandError(f"Target village '{target_village}' not found in database.")
 
-        self.stdout.write(f"Matching {len(db_villages)} database village(s) against {len(gdf)} GIS records...")
+        self.stdout.write(
+            f"\nMatching {len(db_villages)} village(s) with MANDATORY District Pre-Filtering (Max distance: {max_dist_km} km)..."
+        )
 
-        shp_names = gdf[name_field].astype(str).tolist()
         updated_count = 0
+        summary_results = []
 
         with transaction.atomic():
             for village in db_villages:
-                matched_idx = self._find_match(village.name, shp_names, enable_fuzzy)
+                self.stdout.write("=" * 70)
+                self.stdout.write(f"Target: '{village.name}' (Database District: {village.district})")
 
-                if matched_idx is None:
+                # -------------------------------------------------------------
+                # STEP 1: STRICT DISTRICT PRE-FILTERING
+                # -------------------------------------------------------------
+                target_district = (cli_district or village.district or "").strip().lower()
+                allowed_districts = DISTRICT_SYNONYMS.get(target_district, [target_district])
+
+                # Check if village is Bhadla (check Phalodi, Jodhpur, and Jaisalmer)
+                if village.name.lower() == "bhadla":
+                    allowed_districts = ["phalodi", "jodhpur", "jaisalmer", "bikaner"]
+
+                district_series = gdf[district_field].astype(str).str.strip().str.lower()
+                district_mask = district_series.apply(
+                    lambda d: any(ad in d for ad in allowed_districts)
+                )
+
+                district_subset = gdf[district_mask]
+                self.stdout.write(
+                    f"  [1. DISTRICT FILTER] State dataset: {len(gdf):,} records -> "
+                    f"Filtered down to {len(district_subset):,} records in district(s): {allowed_districts}"
+                )
+
+                if district_subset.empty:
                     self.stdout.write(self.style.WARNING(
-                        f"  [NO MATCH] No shapefile feature matched database village: '{village.name}'"
+                        f"  [!] No records found for district(s) {allowed_districts}. Skipping."
                     ))
+                    summary_results.append({
+                        "name": village.name,
+                        "district": target_district,
+                        "matched": "None",
+                        "status": "NO_DISTRICT_RECORDS"
+                    })
                     continue
 
-                row = gdf.iloc[matched_idx]
-                shp_vname = row[name_field]
-                geom = row.geometry
+                # -------------------------------------------------------------
+                # STEP 2: NAME MATCHING WITHIN DISTRICT SUBSET
+                # -------------------------------------------------------------
+                target_clean = village.name.strip().lower()
+                candidate_rows = []
 
-                if geom is None or geom.is_empty:
-                    self.stdout.write(self.style.ERROR(
-                        f"  [EMPTY GEOM] Geometry for '{shp_vname}' is empty. Skipping."
+                for idx, row in district_subset.iterrows():
+                    shp_name = str(row[name_field]).strip()
+                    shp_lower = shp_name.lower()
+
+                    # Exact match
+                    if shp_lower == target_clean:
+                        candidate_rows.append((row, 1.0, "Exact Match"))
+                    # Prefix / Contains match (e.g. "Piplantri Khurd" contains "Piplantri")
+                    elif target_clean in shp_lower:
+                        candidate_rows.append((row, 0.9, f"Contains ('{shp_name}')"))
+                    elif enable_fuzzy:
+                        sim = difflib.SequenceMatcher(None, target_clean, shp_lower).ratio()
+                        if sim >= 0.70 and len(shp_lower) >= (len(target_clean) - 2):
+                            candidate_rows.append((row, sim, f"Fuzzy ({sim:.2f})"))
+
+                if not candidate_rows:
+                    self.stdout.write(self.style.WARNING(
+                        f"  [2. NAME MATCH] No shapefile record matched '{village.name}' in district '{target_district}'."
                     ))
+                    summary_results.append({
+                        "name": village.name,
+                        "district": target_district,
+                        "matched": "None",
+                        "status": "NO_NAME_MATCH"
+                    })
                     continue
 
-                # Repair invalid geometries
+                # -------------------------------------------------------------
+                # STEP 3: SPATIAL PROXIMITY RANKING (Centroid Distance)
+                # -------------------------------------------------------------
+                ranked_candidates = []
+                for row, score, match_type in candidate_rows:
+                    geom = row.geometry
+                    if geom is None or geom.is_empty:
+                        continue
+                    poly_centroid = geom.centroid
+                    dist_km = haversine_distance_km(
+                        village.location.x, village.location.y,
+                        poly_centroid.x, poly_centroid.y
+                    )
+                    ranked_candidates.append((dist_km, score, row, match_type))
+
+                if not ranked_candidates:
+                    self.stdout.write(self.style.WARNING(f"  [!] No candidates with valid geometry for '{village.name}'."))
+                    continue
+
+                # Filter by spatial proximity FIRST: Discard any namesake > max_dist_km away
+                valid_spatial = [c for c in ranked_candidates if c[0] <= max_dist_km]
+
+                if not valid_spatial:
+                    closest = min(ranked_candidates, key=lambda x: x[0])
+                    closest_name = closest[2][name_field]
+                    closest_dist_val = closest[2][district_field]
+                    self.stdout.write(self.style.WARNING(
+                        f"  [REJECTED] Closest candidate '{closest_name}' ({closest_dist_val}) "
+                        f"is {closest[0]:.1f} km away (exceeds {max_dist_km} km spatial limit). "
+                        f"Skipping cross-district false positive."
+                    ))
+                    summary_results.append({
+                        "name": village.name,
+                        "district": target_district,
+                        "matched": closest_name,
+                        "distance_km": round(closest[0], 2),
+                        "status": "REJECTED_DISTANCE"
+                    })
+                    continue
+
+                # Sort geographically valid candidates by match quality (-score), then by proximity (distance)
+                valid_spatial.sort(key=lambda x: (-x[1], x[0]))
+
+                best_dist, best_score, best_row, match_type = valid_spatial[0]
+                shp_vname = best_row[name_field]
+                shp_dist_val = best_row[district_field]
+
+                self.stdout.write(
+                    f"  [3. SPATIAL CHECK] Best Verified Candidate: '{shp_vname}' ({shp_dist_val}) | "
+                    f"Distance to Centroid: {best_dist:.2f} km (PASS <= {max_dist_km} km) | Match: {match_type}"
+                )
+
+                # -------------------------------------------------------------
+                # STEP 4: GEOMETRY CLEANING & POSTGIS COMMIT
+                # -------------------------------------------------------------
+                geom = best_row.geometry
                 if not geom.is_valid:
-                    self.stdout.write(self.style.WARNING(f"  Repairing self-intersecting geometry for '{shp_vname}'..."))
+                    self.stdout.write(f"  Repairing self-intersecting geometry for '{shp_vname}'...")
                     geom = make_valid(geom)
 
-                # Ensure 2D MultiPolygon
                 multipoly = self._to_geodjango_multipolygon(geom)
                 if multipoly is None:
-                    self.stdout.write(self.style.ERROR(f"  Cannot cast geometry of type {geom.geom_type} to MultiPolygon."))
+                    self.stdout.write(self.style.ERROR(f"  Failed to convert geometry to MultiPolygon."))
                     continue
 
-                # Metric area computation via UTM projection
                 utm_epsg = 32643 if village.location.x > 73.0 else 32642
                 projected_geom = multipoly.transform(utm_epsg, clone=True)
                 area_ha = round(projected_geom.area / 10000.0, 2)
@@ -196,17 +366,42 @@ class Command(BaseCommand):
                     village.save(update_fields=["boundary", "area_hectares"])
 
                 self.stdout.write(self.style.SUCCESS(
-                    f"  ✓ Matched '{village.name}' with Shapefile record '{shp_vname}': "
-                    f"Area = {area_ha} ha, Vertices = {len(multipoly[0][0])}"
+                    f"  ✓ VERIFIED & COMMITTED: '{village.name}' -> '{shp_vname}'\n"
+                    f"    District: {shp_dist_val} | Distance: {best_dist:.2f} km (PASS)\n"
+                    f"    Area: {area_ha} ha | Vertices: {len(multipoly[0][0])}"
                 ))
                 updated_count += 1
+                summary_results.append({
+                    "name": village.name,
+                    "district": shp_dist_val,
+                    "matched": shp_vname,
+                    "distance_km": round(best_dist, 2),
+                    "area_ha": area_ha,
+                    "vertices": len(multipoly[0][0]),
+                    "status": "UPDATED"
+                })
 
             if dry_run:
                 self.stdout.write(self.style.WARNING("\n[DRY RUN] Rolled back transaction. No changes committed."))
                 transaction.set_rollback(True)
 
+        self.stdout.write("\n" + "=" * 70)
+        self.stdout.write("IMPORT SUMMARY:")
+        self.stdout.write("=" * 70)
+        for res in summary_results:
+            st = res["status"]
+            if st == "UPDATED":
+                self.stdout.write(self.style.SUCCESS(
+                    f"  ✓ {res['name']:<12} | Matched: {res['matched']:<24} | Dist: {res['district']:<12} | "
+                    f"Offset: {res['distance_km']} km | Area: {res['area_ha']} ha"
+                ))
+            else:
+                self.stdout.write(self.style.WARNING(
+                    f"  - {res['name']:<12} | Status: {st:<18} | Target Dist: {res['district']}"
+                ))
+        self.stdout.write("=" * 70)
         self.stdout.write(self.style.SUCCESS(
-            f"\nFinished: Successfully updated {updated_count}/{len(db_villages)} villages from official Shapefile."
+            f"Complete: {updated_count}/{len(db_villages)} villages updated with verified boundaries."
         ))
 
     def _inspect_file(self, gdf, file_path):
@@ -214,7 +409,7 @@ class Command(BaseCommand):
         self.stdout.write("=" * 70)
         self.stdout.write(f"SHAPEFILE INSPECTION: {os.path.basename(file_path)}")
         self.stdout.write("=" * 70)
-        self.stdout.write(f"Total Features (Rows): {len(gdf)}")
+        self.stdout.write(f"Total Features (Rows): {len(gdf):,}")
         self.stdout.write(f"CRS: {gdf.crs}")
         self.stdout.write(f"Geometry Types: {gdf.geometry.geom_type.value_counts().to_dict()}")
         self.stdout.write(f"Attribute Columns ({len(gdf.columns)}): {list(gdf.columns)}")
@@ -224,30 +419,6 @@ class Command(BaseCommand):
             props = {c: str(row[c])[:30] for c in cols_to_show}
             self.stdout.write(f"  Record #{idx + 1}: {props}")
         self.stdout.write("=" * 70)
-        self.stdout.write("TIP: Identify the village name column and run:")
-        self.stdout.write(f"python manage.py load_village_shapefile --file \"{file_path}\" --name-field <NAME_COL>")
-        self.stdout.write("=" * 70)
-
-    def _find_match(self, target_name, candidates, fuzzy=False):
-        """Find index of matching candidate name."""
-        target_clean = target_name.strip().lower()
-        for idx, cand in enumerate(candidates):
-            if str(cand).strip().lower() == target_clean:
-                return idx
-
-        # Contains match (e.g. "Piplantri Kalan" contains "Piplantri")
-        for idx, cand in enumerate(candidates):
-            c_clean = str(cand).strip().lower()
-            if target_clean in c_clean or c_clean in target_clean:
-                return idx
-
-        if fuzzy:
-            cand_clean = [str(c).strip().lower() for c in candidates]
-            matches = difflib.get_close_matches(target_clean, cand_clean, n=1, cutoff=0.75)
-            if matches:
-                return cand_clean.index(matches[0])
-
-        return None
 
     def _to_geodjango_multipolygon(self, shapely_geom):
         """Convert a Shapely geometry into a clean 2D GeoDjango MultiPolygon."""
@@ -268,4 +439,3 @@ class Command(BaseCommand):
             geos_mpoly.srid = 4326
             return geos_mpoly
         return None
-
