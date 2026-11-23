@@ -141,8 +141,8 @@ class SatelliteBand(models.Model):
         help_text="Ground sampling distance / spatial resolution in meters (e.g. 10.0, 20.0)"
     )
     crs = models.CharField(
-        max_length=200,
-        help_text="Coordinate Reference System (e.g. EPSG:32643 - UTM Zone 43N)"
+        max_length=500,
+        help_text="Coordinate Reference System (e.g. EPSG:32643 - UTM Zone 43N or WKT)"
     )
     width = models.IntegerField(
         null=True,

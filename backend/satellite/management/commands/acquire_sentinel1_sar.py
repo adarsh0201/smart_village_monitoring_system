@@ -37,6 +37,13 @@ class Command(BaseCommand):
             help="Satellite orbit pass direction (default: any)"
         )
         parser.add_argument(
+            "--collection",
+            type=str,
+            choices=["sentinel-1-rtc", "sentinel-1-grd"],
+            default="sentinel-1-rtc",
+            help="SAR STAC collection: 'sentinel-1-rtc' (Terrain-Corrected, recommended) or 'sentinel-1-grd'"
+        )
+        parser.add_argument(
             "--force",
             action="store_true",
             help="Force re-processing and overwrite existing cached raster products"
@@ -45,6 +52,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         village_name = options["village"]
         scene_id = options["scene_id"]
+        collection = options["collection"]
         orbit = None if options["orbit"] == "any" else options["orbit"]
         force_refresh = options["force"]
 
@@ -55,23 +63,40 @@ class Command(BaseCommand):
         self.stdout.write("=" * 80)
         self.stdout.write(f"PHASE 2: SENTINEL-1 SAR ACQUISITION & PROCESSING")
         self.stdout.write(f"Target Village: {village.name} ({village.district}, {village.state})")
+        self.stdout.write(f"Collection:     {collection}")
         self.stdout.write("=" * 80)
 
         # 1. Discover or Resolve Target Scene
+        vv_url, vh_url = None, None
         if not scene_id:
-            self.stdout.write(f"Searching STAC for latest Sentinel-1 IW GRD scenes over {village.name}...")
+            self.stdout.write(f"Searching STAC for latest Sentinel-1 scenes over {village.name}...")
             scenes = search_sentinel1_sar_scenes(
                 village=village,
                 limit=5,
                 orbit_direction=orbit,
-                collection="sentinel-1-grd",
+                collection=collection,
                 sign_urls=True
             )
+            # Fallback to alternate collection if not found
+            if not scenes and collection == "sentinel-1-rtc":
+                self.stdout.write("No RTC scenes found, attempting fallback to sentinel-1-grd...")
+                collection = "sentinel-1-grd"
+                scenes = search_sentinel1_sar_scenes(
+                    village=village,
+                    limit=5,
+                    orbit_direction=orbit,
+                    collection=collection,
+                    sign_urls=True
+                )
+
             if not scenes:
                 raise CommandError(f"No Sentinel-1 SAR scenes found intersecting {village.name}.")
 
             selected_scene = scenes[0]
             scene_id = selected_scene["scene_id"]
+            assets = selected_scene.get("assets", {})
+            vv_url = assets.get("vv") or assets.get("VV")
+            vh_url = assets.get("vh") or assets.get("VH")
             self.stdout.write(
                 f"✓ Selected latest scene: {scene_id} "
                 f"({selected_scene['acquisition_date'][:10]} | Orbit: {selected_scene['orbit_state']})"
@@ -81,7 +106,8 @@ class Command(BaseCommand):
 
         # 2. Ingest & Process SAR Imagery
         self.stdout.write(f"\nProcessing dual-pol radar imagery for {village.name}...")
-        self.stdout.write("  - Downloading & clipping VV and VH Cloud-Optimized GeoTIFFs...")
+        self.stdout.write("  - Fetching official PostGIS MultiPolygon boundary...")
+        self.stdout.write("  - Streaming & clipping VV and VH Cloud-Optimized GeoTIFFs (rasterio.mask)...")
         self.stdout.write("  - Calibrating linear DN to backscatter coefficient sigma_0 (dB)...")
         self.stdout.write("  - Computing Dual-Pol Cross-Ratio (VH_dB - VV_dB)...")
         self.stdout.write("  - Computing Radar Vegetation Index (RVI)...")
@@ -89,6 +115,8 @@ class Command(BaseCommand):
         result = ingest_sentinel1_sar_scene(
             village=village,
             scene_id=scene_id,
+            vv_asset_url=vv_url,
+            vh_asset_url=vh_url,
             force_refresh=force_refresh
         )
 

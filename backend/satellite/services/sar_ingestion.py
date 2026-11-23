@@ -30,7 +30,7 @@ import rasterio
 from rasterio.mask import mask
 from pyproj import Transformer
 import shapely.geometry
-import shapely.ops
+from shapely.ops import transform
 
 from django.conf import settings
 from django.utils import timezone
@@ -194,16 +194,21 @@ def download_and_clip_sar_raster(source_url, output_path, village, buffer_km=2.5
     # 1. Fetch the official MultiPolygon geometry for the village
     village_instance = resolve_village_instance(village)
     aoi_data = generate_village_monitoring_aoi(village_instance, buffer_km=buffer_km)
-    aoi_shapely = shapely.geometry.shape(aoi_data["geojson"])
+    shape_obj = shapely.geometry.shape(aoi_data["geojson"])
 
     # 2. Open source raster (direct HTTP COG streaming via GDAL or local file)
     with rasterio.open(source_url) as src:
         src_crs = src.crs
 
-        # Transform boundary polygon from EPSG:4326 to raster's native CRS
-        transformer = Transformer.from_crs("EPSG:4326", src_crs, always_xy=True)
-        transformed_geom = shapely.ops.transform(transformer.transform, aoi_shapely)
-        shapes = [shapely.geometry.mapping(transformed_geom)]
+        # Transform boundary polygon from EPSG:4326 to raster's native CRS if projected
+        if src_crs is not None:
+            transformer = Transformer.from_crs("EPSG:4326", src_crs, always_xy=True)
+            transformed_geom = transform(transformer.transform, shape_obj)
+            shapes = [transformed_geom]
+            out_crs = src_crs
+        else:
+            shapes = [shape_obj]
+            out_crs = "EPSG:4326"
 
         # Precision mask and sub-pixel crop to boundary
         out_image, out_transform = mask(
@@ -221,6 +226,7 @@ def download_and_clip_sar_raster(source_url, output_path, village, buffer_km=2.5
             "height": out_image.shape[1],
             "width": out_image.shape[2],
             "transform": out_transform,
+            "crs": out_crs,
             "nodata": 0.0,
             "compress": "deflate",
             "dtype": "float32"
@@ -278,25 +284,36 @@ def ingest_sentinel1_sar_scene(
         search_results = search_sentinel1_sar_scenes(
             village_instance,
             limit=25,
-            collection="sentinel-1-grd",
+            collection="sentinel-1-rtc",
             sign_urls=True
         )
+        if not search_results:
+            search_results = search_sentinel1_sar_scenes(
+                village_instance,
+                limit=25,
+                collection="sentinel-1-grd",
+                sign_urls=True
+            )
+
+        scene_list = search_results if isinstance(search_results, list) else search_results.get("scenes", [])
         matched_item = next(
-            (item for item in search_results.get("scenes", []) if item["scene_id"] == scene_id),
+            (item for item in scene_list if item.get("scene_id") == scene_id),
             None
         )
 
-        if not matched_item:
-            sas_token = get_planetary_computer_sas_token("sentinel-1-grd")
-            vv_asset_url = sign_asset_url(vv_asset_url, sas_token)
-            vh_asset_url = sign_asset_url(vh_asset_url, sas_token)
-        else:
-            assets = matched_item.get("band_assets", {})
-            vv_asset_url = assets.get("VV")
-            vh_asset_url = assets.get("VH")
+        if matched_item:
+            assets = matched_item.get("assets") or matched_item.get("band_assets") or {}
+            vv_asset_url = assets.get("vv") or assets.get("VV")
+            vh_asset_url = assets.get("vh") or assets.get("VH")
 
     if not vv_asset_url or not vh_asset_url:
         raise ValueError(f"Could not locate VV and VH assets for Sentinel-1 scene: {scene_id}")
+
+    # Ensure SAS token is attached if accessing Planetary Computer blob storage
+    if "blob.core.windows.net" in vv_asset_url and "sig=" not in vv_asset_url:
+        sas_token = get_planetary_computer_sas_token("sentinel-1-rtc") or get_planetary_computer_sas_token("sentinel-1-grd")
+        vv_asset_url = sign_asset_url(vv_asset_url, sas_token)
+        vh_asset_url = sign_asset_url(vh_asset_url, sas_token)
 
     # 3. Create or Initialize SatelliteScene Database Record
     now = timezone.now()
@@ -397,7 +414,12 @@ def ingest_sentinel1_sar_scene(
             cr_stats = calculate_sar_raster_statistics(cr_array, nodata_val=db_nodata)
             rvi_stats = calculate_sar_raster_statistics(rvi_array, nodata_val=db_nodata)
 
-            crs_str = str(src_vv.crs)
+            if src_vv.crs:
+                crs_epsg = src_vv.crs.to_epsg()
+                crs_str = f"EPSG:{crs_epsg}" if crs_epsg else (src_vv.crs.to_string() if hasattr(src_vv.crs, "to_string") else str(src_vv.crs))[:490]
+            else:
+                crs_str = "EPSG:4326"
+
             res_val = float(src_vv.res[0])
             w = int(src_vv.width)
             h = int(src_vv.height)
@@ -453,7 +475,28 @@ def ingest_sentinel1_sar_scene(
             }
         )
 
-        # 8. Clean up intermediate raw files to conserve storage
+        # 8. Register Radar Vegetation Index (RVI) in Database
+        rel_rvi = os.path.relpath(rvi_path, settings.MEDIA_ROOT).replace("\\", "/")
+        SpectralIndex.objects.update_or_create(
+            scene=scene_record,
+            index_type="RVI",
+            defaults={
+                "file_path": rel_rvi,
+                "resolution": res_val,
+                "crs": crs_str,
+                "min_value": rvi_stats["min"],
+                "max_value": rvi_stats["max"],
+                "mean": rvi_stats["mean"],
+                "median": rvi_stats["median"],
+                "std_dev": rvi_stats["std_dev"],
+                "valid_pixel_count": rvi_stats["valid_count"],
+                "total_pixel_count": rvi_stats["total_count"],
+                "cloud_masked": False,
+                "status": "completed"
+            }
+        )
+
+        # 9. Clean up intermediate raw files to conserve storage
         if os.path.exists(vv_raw_path):
             os.remove(vv_raw_path)
         if os.path.exists(vh_raw_path):
