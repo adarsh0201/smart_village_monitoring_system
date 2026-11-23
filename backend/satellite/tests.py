@@ -371,3 +371,69 @@ class DemIngestionUnitTests(TestCase):
         self.assertEqual(stats["mean"], 60.0)
 
 
+class WorldCoverIngestionUnitTests(TestCase):
+    """
+    Unit tests for ESA WorldCover 10m ground truth label ingestion,
+    categorical class distribution analysis, and nearest-neighbor resampling.
+    """
+    def test_calculate_class_distribution(self):
+        from satellite.services.worldcover_ingestion import calculate_class_distribution
+        # Create 10x10 array with known class counts:
+        # 50 pixels Cropland (40), 30 pixels Built-up (50), 20 pixels Nodata (0)
+        labels = np.zeros((10, 10), dtype=np.uint8)
+        labels[0:5, :] = 40  # 50 pixels
+        labels[5:8, :] = 50  # 30 pixels
+        # rows 8-9 remain 0 (20 pixels nodata)
+
+        dist = calculate_class_distribution(labels, pixel_size_meters=10.0, nodata_val=0)
+
+        self.assertEqual(dist["total_pixels"], 100)
+        self.assertEqual(dist["valid_pixels"], 80)
+        classes = dist["classes"]
+
+        self.assertIn(40, classes)
+        self.assertIn(50, classes)
+        self.assertNotIn(0, classes)
+
+        # Cropland (40)
+        self.assertEqual(classes[40]["pixel_count"], 50)
+        self.assertEqual(classes[40]["percentage"], 62.5)  # 50 / 80 * 100
+        self.assertEqual(classes[40]["area_hectares"], 0.50)  # 50 * 0.01 ha
+
+        # Built-up (50)
+        self.assertEqual(classes[50]["pixel_count"], 30)
+        self.assertEqual(classes[50]["percentage"], 37.5)  # 30 / 80 * 100
+        self.assertEqual(classes[50]["area_hectares"], 0.30)  # 30 * 0.01 ha
+
+    def test_nearest_resampling_preserves_classes(self):
+        import rasterio
+        from rasterio.warp import reproject, Resampling
+        from affine import Affine
+
+        # Small 2x2 categorical input
+        src_labels = np.array([
+            [10, 40],
+            [50, 80]
+        ], dtype=np.uint8)
+
+        src_transform = Affine(20.0, 0.0, 0.0, 0.0, -20.0, 40.0)
+        dst_transform = Affine(10.0, 0.0, 0.0, 0.0, -10.0, 40.0)
+
+        dst_labels = np.zeros((4, 4), dtype=np.uint8)
+
+        reproject(
+            source=src_labels,
+            destination=dst_labels,
+            src_transform=src_transform,
+            src_crs="EPSG:32644",
+            dst_transform=dst_transform,
+            dst_crs="EPSG:32644",
+            resampling=Resampling.nearest
+        )
+
+        # All values in resampled array must be exactly in {10, 40, 50, 80}
+        unique_vals = set(np.unique(dst_labels))
+        self.assertTrue(unique_vals.issubset({10, 40, 50, 80}))
+
+
+

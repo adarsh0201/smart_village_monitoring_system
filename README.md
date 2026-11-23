@@ -99,6 +99,12 @@ Preparation of 30m elevation and topographic features for multi-modal U-Net segm
 - **Topographic Slope Derivation (Horn 1981)**: Computes 3x3 weighted finite-difference terrain slope in degrees ($0^\circ - 90^\circ$) with Euclidean distance padding to eliminate edge nodata cliffs.
 - **Sentinel Grid Alignment**: Bilinear reprojection onto the exact UTM coordinate grid, resolution, and affine transform of existing Sentinel-1 / Sentinel-2 rasters for seamless neural network tensor stacking (`[C, H, W]`).
 
+### Phase 5: Ground Truth Labels (ESA WorldCover 10m)
+Automated extraction and alignment of categorical land cover ground truth for U-Net semantic segmentation ($y$ target mask):
+- **STAC Querying**: Queries `esa-worldcover` 10m Land Use / Land Cover (LULC) dataset from Microsoft Planetary Computer.
+- **Nearest-Neighbor Alignment**: Uses `Resampling.nearest` during reprojection to strictly preserve integer categorical class IDs (10: Tree cover, 20: Shrubland, 30: Grassland, 40: Cropland, 50: Built-up, 60: Bare, 80: Water, 90: Wetland).
+- **Target Mask Export**: Generates `worldcover_aligned.tif` (uint8, nodata=0) exactly matching the spatial grid and dimensions of the multi-spectral and radar input stack.
+
 ---
 
 ## 📍 Pilot Villages Database
@@ -213,6 +219,15 @@ python backend/manage.py acquire_dem --village Gahmar
 
 # Batch process across all villages
 python backend/manage.py acquire_dem --all
+```
+
+### Acquire & Align ESA WorldCover (10m) Ground Truth Labels
+```bash
+# Acquire categorical ground truth mask aligned to 10m Sentinel/DEM grid
+python backend/manage.py acquire_labels --village Gahmar
+
+# Batch acquire labels across all villages
+python backend/manage.py acquire_labels --all
 ```
 
 ---
