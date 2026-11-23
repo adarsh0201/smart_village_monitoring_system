@@ -16,6 +16,22 @@ import environ
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Configure PROJ environment for PyProj / GDAL / Rasterio
+import os
+try:
+    import rasterio
+    r_proj = os.path.join(os.path.dirname(rasterio.__file__), "proj_data")
+    if os.path.isdir(r_proj):
+        os.environ["PROJ_LIB"] = r_proj
+        os.environ["PROJ_DATA"] = r_proj
+        try:
+            import pyproj.datadir
+            pyproj.datadir.set_data_dir(r_proj)
+        except Exception:
+            pass
+except Exception:
+    pass
+
 # Initialize django-environ
 env = environ.Env(
     DEBUG=(bool, True),

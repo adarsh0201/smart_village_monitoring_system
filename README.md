@@ -92,6 +92,13 @@ Cloud-penetrating, day/night radar pipeline designed to maintain continuous moni
 - **MNDWI** (Modified NDWI): Urban and turbid water discrimination.
 - **SCL Cloud Masking**: Bitmask filtering using Sentinel-2 Scene Classification Layer.
 
+### Phase 4: Copernicus DEM (GLO-30) & Topographic Terrain Stack
+Preparation of 30m elevation and topographic features for multi-modal U-Net segmentation:
+- **STAC Asset Querying**: Searches Microsoft Planetary Computer `cop-dem-glo-30` collection intersecting official village PostGIS MultiPolygons with automated SAS token authentication.
+- **Boundary Precision Masking**: Clips elevation models directly via `rasterio.mask` with sub-pixel alignment.
+- **Topographic Slope Derivation (Horn 1981)**: Computes 3x3 weighted finite-difference terrain slope in degrees ($0^\circ - 90^\circ$) with Euclidean distance padding to eliminate edge nodata cliffs.
+- **Sentinel Grid Alignment**: Bilinear reprojection onto the exact UTM coordinate grid, resolution, and affine transform of existing Sentinel-1 / Sentinel-2 rasters for seamless neural network tensor stacking (`[C, H, W]`).
+
 ---
 
 ## 📍 Pilot Villages Database
@@ -199,6 +206,15 @@ python backend/manage.py acquire_sentinel1_sar --village Gahmar
 python backend/manage.py acquire_sentinel1_sar --village Saifai --force
 ```
 
+### Acquire & Process Copernicus DEM (30m) & Topographic Slope
+```bash
+# Process native 30m DEM & Slope and align to existing Sentinel data
+python backend/manage.py acquire_dem --village Gahmar
+
+# Batch process across all villages
+python backend/manage.py acquire_dem --all
+```
+
 ---
 
 ## 📐 Mathematical & Radar Formulations
@@ -210,6 +226,11 @@ $$\sigma^0_{\text{dB}} = 10 \cdot \log_{10}\left(\max(\text{intensity}, 10^{-7})
 ### 2. Dual-Pol Cross-Ratio (CR)
 Measures depolarization caused by multi-bounce scattering inside crop canopies and structures:
 $$\text{CR}_{\text{dB}} = VH_{\text{dB}} - VV_{\text{dB}}$$
+
+### 3. Topographic Slope (Horn 1981)
+Evaluates local terrain gradient from orthometric elevation $z(x, y)$ using a $3\times3$ finite-difference stencil:
+$$\frac{\partial z}{\partial x} = \frac{(c + 2f + i) - (a + 2d + g)}{8 \cdot \Delta x}, \quad \frac{\partial z}{\partial y} = \frac{(g + 2h + i) - (a + 2b + c)}{8 \cdot \Delta y}$$
+$$\text{Slope}_{\text{degrees}} = \arctan\left(\sqrt{\left(\frac{\partial z}{\partial x}\right)^2 + \left(\frac{\partial z}{\partial y}\right)^2}\right) \times \frac{180^\circ}{\pi}$$
 
 ### 3. Radar Vegetation Index (RVI)
 Dual-polarization ratio estimating canopy development and biomass density:

@@ -307,3 +307,67 @@ class Sentinel1SARPipelineUnitTests(TestCase):
         self.assertEqual(stats["max"], -10.0)
         self.assertAlmostEqual(stats["mean"], -12.0, places=3)
 
+
+class DemIngestionUnitTests(TestCase):
+    """
+    Unit tests for 30m Copernicus DEM ingestion, Horn topographic slope calculation,
+    and multi-modal raster alignment.
+    """
+    def test_calculate_topographic_slope_flat(self):
+        from satellite.services.dem_ingestion import calculate_topographic_slope
+        # Completely flat plane at 100m elevation
+        flat_elev = np.full((5, 5), 100.0, dtype=np.float32)
+        slope = calculate_topographic_slope(flat_elev, res_x=30.0, res_y=30.0)
+
+        # All valid pixels should have 0.0 degrees slope
+        np.testing.assert_allclose(slope, 0.0, atol=1e-5)
+
+    def test_calculate_topographic_slope_constant_incline(self):
+        import math
+        from satellite.services.dem_ingestion import calculate_topographic_slope
+        # 1-meter elevation gain per 30-meter pixel along X-axis
+        # Expected slope: arctan(1/30) rad = ~1.909°
+        incline = np.array([
+            [10.0, 11.0, 12.0, 13.0, 14.0],
+            [10.0, 11.0, 12.0, 13.0, 14.0],
+            [10.0, 11.0, 12.0, 13.0, 14.0],
+            [10.0, 11.0, 12.0, 13.0, 14.0],
+            [10.0, 11.0, 12.0, 13.0, 14.0],
+        ], dtype=np.float32)
+
+        slope = calculate_topographic_slope(incline, res_x=30.0, res_y=30.0)
+        expected_deg = math.degrees(math.atan(1.0 / 30.0))
+
+        # Check interior pixels (rows 1-3, cols 1-3)
+        interior = slope[1:4, 1:4]
+        np.testing.assert_allclose(interior, expected_deg, atol=1e-3)
+
+    def test_calculate_topographic_slope_nodata_boundary(self):
+        from satellite.services.dem_ingestion import calculate_topographic_slope
+        elev = np.array([
+            [-9999.0, -9999.0, -9999.0],
+            [-9999.0,   100.0,   100.0],
+            [-9999.0,   100.0,   100.0]
+        ], dtype=np.float32)
+
+        slope = calculate_topographic_slope(elev, res_x=30.0, res_y=30.0, nodata_val=-9999.0)
+
+        # Nodata pixels must remain -9999.0
+        self.assertEqual(float(slope[0, 0]), -9999.0)
+        self.assertEqual(float(slope[1, 0]), -9999.0)
+        # Valid flat pixels must not blow up to 89.9° due to edge padding
+        self.assertAlmostEqual(float(slope[1, 1]), 0.0, places=3)
+        self.assertAlmostEqual(float(slope[2, 2]), 0.0, places=3)
+
+    def test_calculate_dem_raster_statistics(self):
+        from satellite.services.dem_ingestion import calculate_raster_statistics
+        data = np.array([[50.0, 60.0], [70.0, -9999.0]], dtype=np.float32)
+        stats = calculate_raster_statistics(data, nodata_val=-9999.0)
+
+        self.assertEqual(stats["valid_count"], 3)
+        self.assertEqual(stats["total_count"], 4)
+        self.assertEqual(stats["min"], 50.0)
+        self.assertEqual(stats["max"], 70.0)
+        self.assertEqual(stats["mean"], 60.0)
+
+
