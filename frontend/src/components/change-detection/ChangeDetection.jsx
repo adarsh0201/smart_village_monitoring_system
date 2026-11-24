@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { ArrowLeftRight, Clock, ArrowRight, GitCompare } from 'lucide-react';
 
+const isOpticalSentinel2Scene = (scene) => {
+  if (!scene) return false;
+  const sceneId = (scene.scene_id || '').toUpperCase();
+  const collection = (scene.collection || '').toLowerCase();
+  const isS2 = sceneId.includes('S2A') || sceneId.includes('S2B') || collection.includes('sentinel-2') || collection.includes('s2');
+  const isS1 = sceneId.includes('S1A') || sceneId.includes('S1B') || sceneId.includes('S1D') || collection.includes('sentinel-1') || collection.includes('sar');
+  return isS2 && !isS1;
+};
+
 export function ChangeDetection({
   villages = [],
   selectedVillage = null,
@@ -10,7 +19,7 @@ export function ChangeDetection({
 }) {
   const targetVillageId = selectedVillage?.id ?? (villages[0]?.id ?? '');
   const activeVillageObj = villages.find((v) => String(v.id) === String(targetVillageId)) || villages[0];
-  const villageScenes = scenes.filter((s) => String(s.village) === String(targetVillageId));
+  const villageScenes = scenes.filter((s) => String(s.village) === String(targetVillageId) && isOpticalSentinel2Scene(s));
 
   const [t1SceneId, setT1SceneId] = useState(villageScenes[0]?.id || '');
   const [t2SceneId, setT2SceneId] = useState(villageScenes[1]?.id || villageScenes[0]?.id || '');

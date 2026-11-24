@@ -89,9 +89,9 @@ function VillageMap({
   isLoading = false,
   error = null,
   selectedVillage = null,
-  onSelectVillage = () => {},
+  onSelectVillage = () => { },
   onNavigateToSatellite = null,
-  onRefresh = () => {},
+  onRefresh = () => { },
 }) {
   const [resetCount, setResetCount] = useState(0);
   const [isInspectorCollapsed, setIsInspectorCollapsed] = useState(false);
@@ -352,9 +352,8 @@ function VillageMap({
 
                       <div className="popup-status-note">
                         <span
-                          className={`boundary-indicator-dot ${
-                            village.boundary ? 'has-boundary' : 'no-boundary'
-                          }`}
+                          className={`boundary-indicator-dot ${village.boundary ? 'has-boundary' : 'no-boundary'
+                            }`}
                         ></span>
                         <span>
                           {village.boundary

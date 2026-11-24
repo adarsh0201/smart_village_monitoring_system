@@ -18,12 +18,25 @@ import {
 import { getSceneIndices, computeSceneIndices } from '../../services/api';
 import LulcAnalyticsDashboard from './LulcAnalyticsDashboard';
 
+const isOpticalSentinel2Scene = (scene) => {
+  if (!scene) return false;
+  const sceneId = (scene.scene_id || '').toUpperCase();
+  const collection = (scene.collection || '').toLowerCase();
+
+  // Strictly Sentinel-2 optical scenes (S2A or S2B)
+  const isS2 = sceneId.includes('S2A') || sceneId.includes('S2B') || collection.includes('sentinel-2') || collection.includes('s2');
+  // Exclude radar / Sentinel-1
+  const isS1 = sceneId.includes('S1A') || sceneId.includes('S1B') || sceneId.includes('S1D') || collection.includes('sentinel-1') || collection.includes('sar');
+
+  return isS2 && !isS1;
+};
+
 export function EnvironmentalAnalytics({
   villages = [],
   selectedVillage = null,
-  onSelectVillage = () => {},
+  onSelectVillage = () => { },
   scenes = [],
-  onNavigateToSatellite = () => {},
+  onNavigateToSatellite = () => { },
 }) {
   const [selectedIndex, setSelectedIndex] = useState('ndvi');
   const [selectedSceneId, setSelectedSceneId] = useState('');
@@ -37,9 +50,14 @@ export function EnvironmentalAnalytics({
   const targetVillageId = selectedVillage?.id ?? (villages[0]?.id ?? '');
   const activeVillageObj = villages.find((v) => String(v.id) === String(targetVillageId)) || villages[0];
 
-  // Filter scenes belonging to the active village
+  // Strictly filter scenes belonging to the active village that are Sentinel-2 optical granules
   const villageScenes = useMemo(
-    () => scenes.filter((s) => String(s.village) === String(targetVillageId)),
+    () =>
+      scenes.filter(
+        (s) =>
+          String(s.village) === String(targetVillageId) &&
+          isOpticalSentinel2Scene(s)
+      ),
     [scenes, targetVillageId]
   );
 
@@ -201,7 +219,7 @@ export function EnvironmentalAnalytics({
   return (
     <div className="environmental-analytics-workspace">
       {/* Page Header */}
-      <div className="page-header">
+      <div className="page-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '14px' }}>
         <div className="page-header-title-block">
           <h1 className="page-title">Environmental Analytics & Spectral Indices</h1>
           <p className="page-subtitle">
@@ -209,10 +227,10 @@ export function EnvironmentalAnalytics({
           </p>
         </div>
 
-        {/* Village and Scene Selectors */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+        {/* Village and Scene Selectors - pinned to the left edge at all times */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '16px', flexWrap: 'wrap', width: '100%' }}>
           {/* Village Selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <label
               htmlFor="analytics-village-select"
               style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}
@@ -227,7 +245,7 @@ export function EnvironmentalAnalytics({
                 const found = villages.find((v) => String(v.id) === String(e.target.value));
                 if (found) onSelectVillage(found);
               }}
-              style={{ minWidth: '180px' }}
+              style={{ minWidth: '200px' }}
             >
               {villages.map((v) => (
                 <option key={v.id} value={v.id}>
@@ -237,25 +255,25 @@ export function EnvironmentalAnalytics({
             </select>
           </div>
 
-          {/* Scene Selector */}
+          {/* Scene Selector (Strictly Optical Sentinel-2) */}
           {villageScenes.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <label
                 htmlFor="analytics-scene-select"
                 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}
               >
-                Scene:
+                Sentinel-2 Scene:
               </label>
               <select
                 id="analytics-scene-select"
                 className="form-select"
                 value={activeSceneId}
                 onChange={(e) => setSelectedSceneId(e.target.value)}
-                style={{ minWidth: '220px', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
+                style={{ minWidth: '240px', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
               >
                 {villageScenes.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {new Date(s.acquisition_date).toLocaleDateString()} — {s.scene_id.substring(0, 18)}...
+                    {new Date(s.acquisition_date).toLocaleDateString()} — {s.scene_id.substring(0, 20)}...
                   </option>
                 ))}
               </select>
@@ -349,530 +367,531 @@ export function EnvironmentalAnalytics({
       ) : (
         <>
           {/* Real Statistics Metrics Grid (5 Stat Cards) */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '14px',
-          marginBottom: '20px',
-        }}
-      >
-        {/* Metric 1: Mean Value */}
-        <div className="card" style={{ padding: '14px 16px', marginBottom: 0 }}>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
-            Mean {currentIndex.shortName}
-          </span>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '4px' }}>
-            <span style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: 'var(--font-mono)' }}>
-              {activeRecord?.mean !== undefined && activeRecord?.mean !== null
-                ? (activeRecord.mean > 0 ? `+${activeRecord.mean.toFixed(4)}` : activeRecord.mean.toFixed(4))
-                : '—'}
-            </span>
-            {activeRecord?.mean !== undefined && activeRecord?.mean !== null && (
-              <span className={`badge ${activeRecord.mean > 0.25 ? 'badge-green' : activeRecord.mean > 0.1 ? 'badge-warning' : 'badge-gray'}`} style={{ fontSize: '10px' }}>
-                {currentIndex.id === 'ndvi' ? (activeRecord.mean > 0.3 ? 'Good Canopy' : activeRecord.mean > 0.15 ? 'Sparse Scrub' : 'Arid/Barren') : 'Valid Mean'}
-              </span>
-            )}
-          </div>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
-            Unmasked pixel average
-          </span>
-        </div>
-
-        {/* Metric 2: Median Value */}
-        <div className="card" style={{ padding: '14px 16px', marginBottom: 0 }}>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
-            Median {currentIndex.shortName}
-          </span>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '4px' }}>
-            <span style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: 'var(--font-mono)' }}>
-              {activeRecord?.median !== undefined && activeRecord?.median !== null
-                ? (activeRecord.median > 0 ? `+${activeRecord.median.toFixed(4)}` : activeRecord.median.toFixed(4))
-                : '—'}
-            </span>
-          </div>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
-            50th percentile distribution
-          </span>
-        </div>
-
-        {/* Metric 3: Dynamic Physical Range */}
-        <div className="card" style={{ padding: '14px 16px', marginBottom: 0 }}>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
-            Observed Min / Max Range
-          </span>
-          <div style={{ marginTop: '4px', fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-            {activeRecord?.min_value !== undefined && activeRecord?.min_value !== null
-              ? `[${activeRecord.min_value.toFixed(4)} to ${activeRecord.max_value?.toFixed(4)}]`
-              : '—'}
-          </div>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '6px', display: 'block' }}>
-            Physical boundary: {currentIndex.range}
-          </span>
-        </div>
-
-        {/* Metric 4: Standard Deviation */}
-        <div className="card" style={{ padding: '14px 16px', marginBottom: 0 }}>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
-            Standard Deviation (&sigma;)
-          </span>
-          <div style={{ marginTop: '4px', fontFamily: 'var(--font-mono)', fontSize: '24px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-            {activeRecord?.std_dev !== undefined && activeRecord?.std_dev !== null
-              ? `±${activeRecord.std_dev.toFixed(4)}`
-              : '—'}
-          </div>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
-            Spatial heterogeneity index
-          </span>
-        </div>
-
-        {/* Metric 5: Pixel & Cloud Masking Audit */}
-        <div className="card" style={{ padding: '14px 16px', marginBottom: 0 }}>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
-            Valid Pixels / Cloud Mask
-          </span>
-          <div style={{ marginTop: '4px', fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-            {activeRecord?.valid_pixel_count !== undefined
-              ? `${activeRecord.valid_pixel_count.toLocaleString()} px`
-              : '—'}
-          </div>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
-            {activeRecord?.cloud_pixel_count !== undefined
-              ? `${activeRecord.cloud_pixel_count} cloud px masked (${activeRecord.total_pixel_count ? ((activeRecord.cloud_pixel_count / activeRecord.total_pixel_count) * 100).toFixed(2) : 0}%)`
-              : 'SCL cloud masking ready'}
-          </span>
-        </div>
-      </div>
-
-      {/* Spatial Raster Array Visualization Canvas */}
-      <div className="card" style={{ marginBottom: '20px' }}>
-        <div className="card-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
-          <div className="card-title-group">
-            <h3 className="card-title">
-              <Activity size={18} style={{ color: currentIndex.color }} />
-              Spatial Raster Array Visualization — {currentIndex.shortName}
-            </h3>
-            <p className="card-subtitle">
-              High-resolution 10.0m float32 raster colormap visualization for{' '}
-              <strong>{activeVillageObj?.name}</strong> ({activeSceneObj?.scene_id || 'No Scene Selected'})
-            </p>
-          </div>
-
-          {/* Action Toolbar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            {/* Cloud Mask Toggle */}
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '12px',
-                cursor: 'pointer',
-                color: 'var(--color-text-secondary)',
-                marginRight: 6,
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={maskClouds}
-                onChange={(e) => setMaskClouds(e.target.checked)}
-                style={{ cursor: 'pointer' }}
-              />
-              SCL Cloud Masking
-            </label>
-
-            {/* Opacity Slider */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: 8 }}>
-              <Sliders size={14} style={{ color: 'var(--color-text-muted)' }} />
-              <input
-                type="range"
-                min="20"
-                max="100"
-                value={overlayOpacity}
-                onChange={(e) => setOverlayOpacity(Number(e.target.value))}
-                style={{ width: '80px', cursor: 'pointer' }}
-                title={`Overlay Opacity: ${overlayOpacity}%`}
-              />
-              <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', width: '32px' }}>
-                {overlayOpacity}%
-              </span>
-            </div>
-
-            {/* Compute / Recompute Button */}
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={() => handleComputeIndices(hasIndices)}
-              disabled={isComputing || !selectedSceneId}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <RefreshCw size={13} className={isComputing ? 'animate-spin' : ''} />
-              {isComputing ? 'Calculating Rasters...' : hasIndices ? 'Recompute All Indices' : 'Compute Spectral Indices'}
-            </button>
-
-            {/* Download GeoTIFF Button */}
-            {activeRecord?.download_url && (
-              <a
-                href={activeRecord.download_url}
-                download
-                className="btn btn-secondary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
-                title="Download 32-bit floating point GeoTIFF"
-              >
-                <Download size={13} />
-                GeoTIFF (.tif)
-              </a>
-            )}
-
-            {/* Download PNG Overlay */}
-            {activeRecord?.png_url && (
-              <a
-                href={activeRecord.png_url}
-                download
-                className="btn btn-secondary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
-                title="Download transparent RGBA PNG overlay"
-              >
-                <FileDown size={13} />
-                PNG Overlay
-              </a>
-            )}
-          </div>
-        </div>
-
-        {/* Canvas Display Viewport */}
-        <div
-          style={{
-            position: 'relative',
-            minHeight: '380px',
-            maxHeight: '520px',
-            background: '#0f172a',
-            backgroundImage:
-              'radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px), radial-gradient(rgba(255, 255, 255, 0.04) 1px, #0f172a 1px)',
-            backgroundSize: '24px 24px',
-            backgroundPosition: '0 0, 12px 12px',
-            borderRadius: 'var(--radius-md)',
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px',
-          }}
-        >
-          {loadingIndices || isComputing ? (
-            <div style={{ textAlign: 'center', color: '#e2e8f0' }}>
-              <RefreshCw size={36} className="animate-spin" style={{ color: 'var(--color-primary)', marginBottom: 12 }} />
-              <h4 style={{ margin: '0 0 4px 0', fontSize: '15px' }}>
-                {isComputing ? 'Processing Sentinel-2 Surface Reflectance Rasters...' : 'Loading Spectral Indices...'}
-              </h4>
-              <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
-                Calculating pixel arrays with Rasterio 1.4 & NumPy 2.x
-              </p>
-            </div>
-          ) : activeRecord?.png_url ? (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '100%',
-                height: '100%',
-              }}
-            >
-              {/* Raster Image */}
-              <div
-                style={{
-                  position: 'relative',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: 'var(--radius-sm)',
-                  boxShadow: '0 12px 32px rgba(0, 0, 0, 0.6)',
-                  maxWidth: '100%',
-                  maxHeight: '420px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: 'rgba(0, 0, 0, 0.4)',
-                }}
-              >
-                <img
-                  src={activeRecord.png_url}
-                  alt={`${currentIndex.name} Raster Overlay`}
-                  style={{
-                    display: 'block',
-                    maxWidth: '100%',
-                    maxHeight: '400px',
-                    objectFit: 'contain',
-                    opacity: overlayOpacity / 100,
-                    transition: 'opacity 0.15s ease',
-                  }}
-                />
-                {/* Spatial Metadata Overlay Tag */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: 8,
-                    left: 8,
-                    background: 'rgba(15, 23, 42, 0.85)',
-                    backdropFilter: 'blur(4px)',
-                    color: '#f8fafc',
-                    fontSize: '10px',
-                    padding: '4px 8px',
-                    borderRadius: 'var(--radius-xs)',
-                    fontFamily: 'var(--font-mono)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                  }}
-                >
-                  {activeRecord.resolution}m GSD &bull; {activeRecord.crs} &bull; Float32
-                </div>
-              </div>
-            </div>
-          ) : villageScenes.length === 0 ? (
-            <div style={{ textAlign: 'center', color: '#e2e8f0', maxWidth: '440px' }}>
-              <AlertCircle size={36} style={{ color: 'var(--color-warning)', marginBottom: 12 }} />
-              <h4 style={{ margin: '0 0 6px 0', fontSize: '15px' }}>No Satellite Imagery Ingested</h4>
-              <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8', lineHeight: 1.5 }}>
-                Acquire Sentinel-2 multispectral scenes for {activeVillageObj?.name} in the Satellite Imagery workspace before computing indices.
-              </p>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={onNavigateToSatellite}
-                style={{ marginTop: '14px' }}
-              >
-                Go to Satellite Acquisition <ArrowRight size={13} />
-              </button>
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', color: '#e2e8f0', maxWidth: '440px' }}>
-              <Activity size={36} style={{ color: 'var(--color-primary)', marginBottom: 12 }} />
-              <h4 style={{ margin: '0 0 6px 0', fontSize: '15px' }}>Spectral Indices Ready to Calculate</h4>
-              <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8', lineHeight: 1.5 }}>
-                Sentinel-2 Level-2A input bands are ingested and verified on disk. Click below to execute the Rasterio + NumPy array processing engine.
-              </p>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => handleComputeIndices(false)}
-                disabled={isComputing}
-                style={{ marginTop: '16px' }}
-              >
-                Compute All 4 Spectral Indices
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Colormap Legend Scale directly underneath */}
-        <div style={{ marginTop: '14px', padding: '0 4px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
-              Colormap: {currentIndex.colormapName}
-            </span>
-            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
-              Range: {currentIndex.range}
-            </span>
-          </div>
           <div
             style={{
-              height: '14px',
-              borderRadius: 'var(--radius-xs)',
-              background: currentIndex.colormapGradient,
-              border: '1px solid var(--color-border-dark)',
-              marginBottom: '4px',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '14px',
+              marginBottom: '20px',
             }}
-          ></div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--color-text-muted)' }}>
-            {currentIndex.legendLabels.map((lbl) => (
-              <span key={lbl}>{lbl}</span>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* 2-Column Responsive Layout: Formulation & Ingestion Audit */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px', marginBottom: '20px' }}>
-        {/* Panel 1: Scientific & Mathematical Specification */}
-        <div className="card" style={{ marginBottom: 0 }}>
-          <div className="card-header">
-            <div className="card-title-group">
-              <h3 className="card-title">
-                <currentIndex.icon size={18} style={{ color: currentIndex.color }} />
-                {currentIndex.name}
-              </h3>
-              <p className="card-subtitle">Remote sensing bio-physical index formulation</p>
-            </div>
-            <span className="badge badge-gray" style={{ fontFamily: 'var(--font-mono)' }}>
-              Range: {currentIndex.range}
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {/* Mathematical Formula Presentation */}
-            <div
-              style={{
-                background: 'var(--color-surface-muted)',
-                padding: '16px',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-border)',
-                textAlign: 'center',
-              }}
-            >
-              <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)', display: 'block', marginBottom: 6, fontWeight: 700 }}>
-                Mathematical Formulation
+          >
+            {/* Metric 1: Mean Value */}
+            <div className="card" style={{ padding: '14px 16px', marginBottom: 0 }}>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
+                Mean {currentIndex.shortName}
               </span>
-              <code style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-primary)', letterSpacing: '0.02em', fontFamily: 'var(--font-mono)' }}>
-                {currentIndex.formula}
-              </code>
-            </div>
-
-            {/* Scientific Explanation */}
-            <div>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
-                Primary Remote Sensing Purpose:
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '4px' }}>
+                <span style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: 'var(--font-mono)' }}>
+                  {activeRecord?.mean !== undefined && activeRecord?.mean !== null
+                    ? (activeRecord.mean > 0 ? `+${activeRecord.mean.toFixed(4)}` : activeRecord.mean.toFixed(4))
+                    : '—'}
+                </span>
+                {activeRecord?.mean !== undefined && activeRecord?.mean !== null && (
+                  <span className={`badge ${activeRecord.mean > 0.25 ? 'badge-green' : activeRecord.mean > 0.1 ? 'badge-warning' : 'badge-gray'}`} style={{ fontSize: '10px' }}>
+                    {currentIndex.id === 'ndvi' ? (activeRecord.mean > 0.3 ? 'Good Canopy' : activeRecord.mean > 0.15 ? 'Sparse Scrub' : 'Arid/Barren') : 'Valid Mean'}
+                  </span>
+                )}
+              </div>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
+                Unmasked pixel average
               </span>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-primary)', lineHeight: 1.5 }}>
-                {currentIndex.purpose}
-              </p>
             </div>
 
-            {/* Rajasthan Regional Context */}
-            <div
-              style={{
-                background: '#f0fdf4',
-                borderLeft: '3px solid var(--color-primary)',
-                padding: '10px 14px',
-                borderRadius: '0 var(--radius-sm) var(--radius-sm) 0',
-              }}
-            >
-              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)', display: 'block', marginBottom: 2 }}>
-                Rajasthan Regional Specifics:
+            {/* Metric 2: Median Value */}
+            <div className="card" style={{ padding: '14px 16px', marginBottom: 0 }}>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
+                Median {currentIndex.shortName}
               </span>
-              <p style={{ margin: 0, fontSize: '12px', color: '#14532d', lineHeight: 1.5 }}>
-                {currentIndex.rajasthanContext}
-              </p>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '4px' }}>
+                <span style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: 'var(--font-mono)' }}>
+                  {activeRecord?.median !== undefined && activeRecord?.median !== null
+                    ? (activeRecord.median > 0 ? `+${activeRecord.median.toFixed(4)}` : activeRecord.median.toFixed(4))
+                    : '—'}
+                </span>
+              </div>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
+                50th percentile distribution
+              </span>
             </div>
-          </div>
-        </div>
 
-        {/* Panel 2: Required Satellite Inputs & Local Availability */}
-        <div className="card" style={{ marginBottom: 0 }}>
-          <div className="card-header">
-            <div className="card-title-group">
-              <h3 className="card-title">
-                <Layers size={18} style={{ color: 'var(--color-primary)' }} />
-                Required Satellite Input Rasters
-              </h3>
-              <p className="card-subtitle">
-                Local Sentinel-2 Level-2A assets for <strong>{activeVillageObj?.name}</strong>
-              </p>
+            {/* Metric 3: Dynamic Physical Range */}
+            <div className="card" style={{ padding: '14px 16px', marginBottom: 0 }}>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
+                Observed Min / Max Range
+              </span>
+              <div style={{ marginTop: '4px', fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                {activeRecord?.min_value !== undefined && activeRecord?.min_value !== null
+                  ? `[${activeRecord.min_value.toFixed(4)} to ${activeRecord.max_value?.toFixed(4)}]`
+                  : '—'}
+              </div>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '6px', display: 'block' }}>
+                Physical boundary: {currentIndex.range}
+              </span>
             </div>
-            <span className="badge badge-gray">
-              {villageScenes.length} Scene{villageScenes.length !== 1 ? 's' : ''} Available
-            </span>
+
+            {/* Metric 4: Standard Deviation */}
+            <div className="card" style={{ padding: '14px 16px', marginBottom: 0 }}>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
+                Standard Deviation (&sigma;)
+              </span>
+              <div style={{ marginTop: '4px', fontFamily: 'var(--font-mono)', fontSize: '24px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                {activeRecord?.std_dev !== undefined && activeRecord?.std_dev !== null
+                  ? `±${activeRecord.std_dev.toFixed(4)}`
+                  : '—'}
+              </div>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
+                Spatial heterogeneity index
+              </span>
+            </div>
+
+            {/* Metric 5: Pixel & Cloud Masking Audit */}
+            <div className="card" style={{ padding: '14px 16px', marginBottom: 0 }}>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
+                Valid Pixels / Cloud Mask
+              </span>
+              <div style={{ marginTop: '4px', fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                {activeRecord?.valid_pixel_count !== undefined
+                  ? `${activeRecord.valid_pixel_count.toLocaleString()} px`
+                  : '—'}
+              </div>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
+                {activeRecord?.cloud_pixel_count !== undefined
+                  ? `${activeRecord.cloud_pixel_count} cloud px masked (${activeRecord.total_pixel_count ? ((activeRecord.cloud_pixel_count / activeRecord.total_pixel_count) * 100).toFixed(2) : 0}%)`
+                  : 'SCL cloud masking ready'}
+              </span>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {/* Required Spectral Bands */}
-            <div>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
-                Required Sentinel-2 Spectral Bands:
-              </span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {currentIndex.bands.map((b) => (
-                  <div
-                    key={b.code}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '8px 12px',
-                      background: 'var(--color-surface-muted)',
-                      border: '1px solid var(--color-border-light)',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '12px',
-                    }}
+          {/* Spatial Raster Array Visualization Canvas */}
+          <div className="card" style={{ marginBottom: '20px' }}>
+            <div className="card-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
+              <div className="card-title-group">
+                <h3 className="card-title">
+                  <Activity size={18} style={{ color: currentIndex.color }} />
+                  Spatial Raster Array Visualization — {currentIndex.shortName}
+                </h3>
+                <p className="card-subtitle">
+                  High-resolution 10.0m float32 raster colormap visualization for{' '}
+                  <strong>{activeVillageObj?.name}</strong> ({activeSceneObj?.scene_id || 'No Scene Selected'})
+                </p>
+              </div>
+
+              {/* Action Toolbar */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                {/* Cloud Mask Toggle */}
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    color: 'var(--color-text-secondary)',
+                    marginRight: 6,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={maskClouds}
+                    onChange={(e) => setMaskClouds(e.target.checked)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  SCL Cloud Masking
+                </label>
+
+                {/* Opacity Slider */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: 8 }}>
+                  <Sliders size={14} style={{ color: 'var(--color-text-muted)' }} />
+                  <input
+                    type="range"
+                    min="20"
+                    max="100"
+                    value={overlayOpacity}
+                    onChange={(e) => setOverlayOpacity(Number(e.target.value))}
+                    style={{ width: '80px', cursor: 'pointer' }}
+                    title={`Overlay Opacity: ${overlayOpacity}%`}
+                  />
+                  <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', width: '32px' }}>
+                    {overlayOpacity}%
+                  </span>
+                </div>
+
+                {/* Compute / Recompute Button */}
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => handleComputeIndices(hasIndices)}
+                  disabled={isComputing || !selectedSceneId}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <RefreshCw size={13} className={isComputing ? 'animate-spin' : ''} />
+                  {isComputing ? 'Calculating Rasters...' : hasIndices ? 'Recompute All Indices' : 'Compute Spectral Indices'}
+                </button>
+
+                {/* Download GeoTIFF Button */}
+                {activeRecord?.download_url && (
+                  <a
+                    href={activeRecord.download_url}
+                    download
+                    className="btn btn-secondary btn-sm"
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
+                    title="Download 32-bit floating point GeoTIFF"
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span className="badge badge-green" style={{ fontFamily: 'var(--font-mono)' }}>
-                        {b.code}
-                      </span>
-                      <strong>{b.name}</strong>
-                    </div>
-                    <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{b.role}</span>
-                  </div>
-                ))}
+                    <Download size={13} />
+                    GeoTIFF (.tif)
+                  </a>
+                )}
+
+                {/* Download PNG Overlay */}
+                {activeRecord?.png_url && (
+                  <a
+                    href={activeRecord.png_url}
+                    download
+                    className="btn btn-secondary btn-sm"
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
+                    title="Download transparent RGBA PNG overlay"
+                  >
+                    <FileDown size={13} />
+                    PNG Overlay
+                  </a>
+                )}
               </div>
             </div>
 
-            {/* Ingested Scenes Status */}
-            <div>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
-                Ingested Satellite Observations:
-              </span>
-
-              {villageScenes.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '20px 16px', background: 'var(--color-surface-muted)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-border-dark)' }}>
-                  <AlertCircle size={28} style={{ color: 'var(--color-warning)', marginBottom: 6 }} />
-                  <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', color: 'var(--color-text-primary)' }}>No Ingested Scenes For This Village</h4>
-                  <p style={{ margin: 0, fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                    Acquire Sentinel-2 scenes for {activeVillageObj?.name} in the Satellite Imagery workspace.
+            {/* Canvas Display Viewport */}
+            <div
+              style={{
+                position: 'relative',
+                minHeight: '380px',
+                maxHeight: '520px',
+                background: '#0f172a',
+                backgroundImage:
+                  'radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px), radial-gradient(rgba(255, 255, 255, 0.04) 1px, #0f172a 1px)',
+                backgroundSize: '24px 24px',
+                backgroundPosition: '0 0, 12px 12px',
+                borderRadius: 'var(--radius-md)',
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '24px',
+              }}
+            >
+              {loadingIndices || isComputing ? (
+                <div style={{ textAlign: 'center', color: '#e2e8f0' }}>
+                  <RefreshCw size={36} className="animate-spin" style={{ color: 'var(--color-primary)', marginBottom: 12 }} />
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: '15px' }}>
+                    {isComputing ? 'Processing Sentinel-2 Surface Reflectance Rasters...' : 'Loading Spectral Indices...'}
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
+                    Calculating pixel arrays with Rasterio 1.4 & NumPy 2.x
+                  </p>
+                </div>
+              ) : activeRecord?.png_url ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100%',
+                    height: '100%',
+                  }}
+                >
+                  {/* Raster Image */}
+                  <div
+                    style={{
+                      position: 'relative',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: 'var(--radius-sm)',
+                      boxShadow: '0 12px 32px rgba(0, 0, 0, 0.6)',
+                      maxWidth: '100%',
+                      maxHeight: '420px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                    }}
+                  >
+                    <img
+                      src={activeRecord.png_url}
+                      alt={`${currentIndex.name} Raster Overlay`}
+                      style={{
+                        display: 'block',
+                        maxWidth: '100%',
+                        maxHeight: '400px',
+                        objectFit: 'contain',
+                        opacity: overlayOpacity / 100,
+                        transition: 'opacity 0.15s ease',
+                      }}
+                    />
+                    {/* Spatial Metadata Overlay Tag */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: 8,
+                        left: 8,
+                        background: 'rgba(15, 23, 42, 0.85)',
+                        backdropFilter: 'blur(4px)',
+                        color: '#f8fafc',
+                        fontSize: '10px',
+                        padding: '4px 8px',
+                        borderRadius: 'var(--radius-xs)',
+                        fontFamily: 'var(--font-mono)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                      }}
+                    >
+                      {activeRecord.resolution}m GSD &bull; {activeRecord.crs} &bull; Float32
+                    </div>
+                  </div>
+                </div>
+              ) : villageScenes.length === 0 ? (
+                <div style={{ textAlign: 'center', color: '#e2e8f0', maxWidth: '440px' }}>
+                  <AlertCircle size={36} style={{ color: 'var(--color-warning)', marginBottom: 12 }} />
+                  <h4 style={{ margin: '0 0 6px 0', fontSize: '15px' }}>No Satellite Imagery Ingested</h4>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8', lineHeight: 1.5 }}>
+                    Acquire Sentinel-2 multispectral scenes for {activeVillageObj?.name} in the Satellite Imagery workspace before computing indices.
                   </p>
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
                     onClick={onNavigateToSatellite}
-                    style={{ marginTop: '10px' }}
+                    style={{ marginTop: '14px' }}
                   >
-                    Go to Acquisition Pipeline <ArrowRight size={13} />
+                    Go to Satellite Acquisition <ArrowRight size={13} />
                   </button>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {villageScenes.map((scene) => (
-                    <div
-                      key={scene.id}
-                      style={{
-                        padding: '10px 14px',
-                        background: String(scene.id) === String(activeSceneId) ? '#f0fdf4' : 'var(--color-surface)',
-                        border: String(scene.id) === String(activeSceneId) ? '1px solid var(--color-primary)' : '1px solid var(--color-border)',
-                        borderRadius: 'var(--radius-sm)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        cursor: 'pointer',
-                      }}
-                      onClick={() => setSelectedSceneId(String(scene.id))}
-                    >
-                      <div>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: '12px', display: 'block', color: 'var(--color-text-primary)' }}>
-                          {scene.scene_id}
-                        </span>
-                        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-                          Acquired: {new Date(scene.acquisition_date).toLocaleDateString()} &bull; Cloud: {scene.cloud_cover}% &bull; {scene.bands_count || 7} Bands
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span className="badge badge-green" style={{ fontSize: '10px' }}>
-                          <ShieldCheck size={11} /> Rasters Ingested
-                        </span>
-                        {String(scene.id) === String(activeSceneId) && (
-                          <span className="badge badge-primary" style={{ fontSize: '10px' }}>
-                            Selected
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                <div style={{ textAlign: 'center', color: '#e2e8f0', maxWidth: '440px' }}>
+                  <Activity size={36} style={{ color: 'var(--color-primary)', marginBottom: 12 }} />
+                  <h4 style={{ margin: '0 0 6px 0', fontSize: '15px' }}>Spectral Indices Ready to Calculate</h4>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8', lineHeight: 1.5 }}>
+                    Sentinel-2 Level-2A input bands are ingested and verified on disk. Click below to execute the Rasterio + NumPy array processing engine.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => handleComputeIndices(false)}
+                    disabled={isComputing}
+                    style={{ marginTop: '16px' }}
+                  >
+                    Compute All 4 Spectral Indices
+                  </button>
                 </div>
               )}
             </div>
+
+            {/* Colormap Legend Scale directly underneath */}
+            <div style={{ marginTop: '14px', padding: '0 4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                  Colormap: {currentIndex.colormapName}
+                </span>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+                  Range: {currentIndex.range}
+                </span>
+              </div>
+              <div
+                style={{
+                  height: '14px',
+                  borderRadius: 'var(--radius-xs)',
+                  background: currentIndex.colormapGradient,
+                  border: '1px solid var(--color-border-dark)',
+                  marginBottom: '4px',
+                }}
+              ></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--color-text-muted)' }}>
+                {currentIndex.legendLabels.map((lbl) => (
+                  <span key={lbl}>{lbl}</span>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      </>
-    )}
-  </div>
+
+          {/* 2-Column Responsive Layout: Formulation & Ingestion Audit */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+            {/* Panel 1: Scientific & Mathematical Specification */}
+            <div className="card" style={{ marginBottom: 0 }}>
+              <div className="card-header">
+                <div className="card-title-group">
+                  <h3 className="card-title">
+                    <currentIndex.icon size={18} style={{ color: currentIndex.color }} />
+                    {currentIndex.name}
+                  </h3>
+                  <p className="card-subtitle">Remote sensing bio-physical index formulation</p>
+                </div>
+                <span className="badge badge-gray" style={{ fontFamily: 'var(--font-mono)' }}>
+                  Range: {currentIndex.range}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {/* Mathematical Formula Presentation */}
+                <div
+                  style={{
+                    background: 'var(--color-surface-muted)',
+                    padding: '16px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--color-border)',
+                    textAlign: 'center',
+                  }}
+                >
+                  <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)', display: 'block', marginBottom: 6, fontWeight: 700 }}>
+                    Mathematical Formulation
+                  </span>
+                  <code style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-primary)', letterSpacing: '0.02em', fontFamily: 'var(--font-mono)' }}>
+                    {currentIndex.formula}
+                  </code>
+                </div>
+
+                {/* Scientific Explanation */}
+                <div>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
+                    Primary Remote Sensing Purpose:
+                  </span>
+                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-primary)', lineHeight: 1.5 }}>
+                    {currentIndex.purpose}
+                  </p>
+                </div>
+
+                {/* Rajasthan Regional Context */}
+                <div
+                  style={{
+                    background: '#f0fdf4',
+                    borderLeft: '3px solid var(--color-primary)',
+                    padding: '10px 14px',
+                    borderRadius: '0 var(--radius-sm) var(--radius-sm) 0',
+                  }}
+                >
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)', display: 'block', marginBottom: 2 }}>
+                    Rajasthan Regional Specifics:
+                  </span>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#14532d', lineHeight: 1.5 }}>
+                    {currentIndex.rajasthanContext}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Panel 2: Required Satellite Inputs & Local Availability */}
+            <div className="card" style={{ marginBottom: 0 }}>
+              <div className="card-header">
+                <div className="card-title-group">
+                  <h3 className="card-title">
+                    <Layers size={18} style={{ color: 'var(--color-primary)' }} />
+                    Required Satellite Input Rasters
+                  </h3>
+                  <p className="card-subtitle">
+                    Local Sentinel-2 Level-2A assets for <strong>{activeVillageObj?.name}</strong>
+                  </p>
+                </div>
+                <span className="badge badge-gray">
+                  {villageScenes.length} Scene{villageScenes.length !== 1 ? 's' : ''} Available
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {/* Required Spectral Bands */}
+                <div>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+                    Required Sentinel-2 Spectral Bands:
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {currentIndex.bands.map((b) => (
+                      <div
+                        key={b.code}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 12px',
+                          background: 'var(--color-surface-muted)',
+                          border: '1px solid var(--color-border-light)',
+                          borderRadius: 'var(--radius-sm)',
+                          fontSize: '12px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span className="badge badge-green" style={{ fontFamily: 'var(--font-mono)' }}>
+                            {b.code}
+                          </span>
+                          <strong>{b.name}</strong>
+                        </div>
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{b.role}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Ingested Scenes Status */}
+                <div>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+                    Ingested Satellite Observations:
+                  </span>
+
+                  {villageScenes.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '20px 16px', background: 'var(--color-surface-muted)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-border-dark)' }}>
+                      <AlertCircle size={28} style={{ color: 'var(--color-warning)', marginBottom: 6 }} />
+                      <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', color: 'var(--color-text-primary)' }}>No Ingested Scenes For This Village</h4>
+                      <p style={{ margin: 0, fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                        Acquire Sentinel-2 scenes for {activeVillageObj?.name} in the Satellite Imagery workspace.
+                      </p>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={onNavigateToSatellite}
+                        style={{ marginTop: '10px' }}
+                      >
+                        Go to Acquisition Pipeline <ArrowRight size={13} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {villageScenes.map((scene) => (
+                        <div
+                          key={scene.id}
+                          style={{
+                            padding: '10px 14px',
+                            background: String(scene.id) === String(activeSceneId) ? '#f0fdf4' : 'var(--color-surface)',
+                            border: String(scene.id) === String(activeSceneId) ? '1px solid var(--color-primary)' : '1px solid var(--color-border)',
+                            borderRadius: 'var(--radius-sm)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => setSelectedSceneId(String(scene.id))}
+                        >
+                          <div>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: '12px', display: 'block', color: 'var(--color-text-primary)' }}>
+                              {scene.scene_id}
+                            </span>
+                            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                              Acquired: {new Date(scene.acquisition_date).toLocaleDateString()} &bull; Cloud: {scene.cloud_cover}% &bull; {scene.bands_count || 7} Bands
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span className="badge badge-green" style={{ fontSize: '10px' }}>
+                              <ShieldCheck size={11} /> Rasters Ingested
+                            </span>
+                            {String(scene.id) === String(activeSceneId) && (
+                              <span className="badge badge-primary" style={{ fontSize: '10px' }}>
+                                Selected
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+    </>
+  )
+}
+  </div >
 );
 }
 
