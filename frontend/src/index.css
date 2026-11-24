@@ -23,3 +23,20 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+/* Optimization for sharp pixel clarity on GIS satellite rasters and map tiles when zooming */
+.leaflet-tile,
+.leaflet-image-layer,
+.leaflet-zoom-animated img,
+.leaflet-tile-container img {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+.leaflet-container {
+  font-family: inherit;
+  background-color: #1a1e24;
+}

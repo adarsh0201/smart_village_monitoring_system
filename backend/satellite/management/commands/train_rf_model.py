@@ -1,0 +1,136 @@
+"""
+Django Management Command: train_rf_model
+
+Trains a pixel-wise Random Forest classifier for Land Use / Land Cover (LULC)
+using aligned Sentinel-1 SAR (VV, VH), Copernicus DEM (Elevation, Slope),
+and ESA WorldCover 10m Ground Truth masks.
+
+Usage:
+  python backend/manage.py train_rf_model --village Gahmar
+  python backend/manage.py train_rf_model --village Gahmar --n-estimators 150 --max-depth 18
+  python backend/manage.py train_rf_model --village Gahmar --predict
+"""
+
+from django.core.management.base import BaseCommand, CommandError
+from villages.models import Village
+from ml.train_random_forest import (
+    load_pixel_dataset,
+    train_random_forest_model,
+    predict_village_lulc_raster,
+    FEATURE_NAMES
+)
+
+
+class Command(BaseCommand):
+    help = "Train pixel-wise Random Forest classifier for LULC and evaluate accuracy & feature importances"
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--village",
+            type=str,
+            default="Gahmar",
+            help="Name of village with aligned rasters (default: 'Gahmar')"
+        )
+        parser.add_argument(
+            "--n-estimators",
+            type=int,
+            default=100,
+            help="Number of decision trees in Random Forest (default: 100)"
+        )
+        parser.add_argument(
+            "--max-depth",
+            type=int,
+            default=16,
+            help="Maximum tree depth (default: 16)"
+        )
+        parser.add_argument(
+            "--test-size",
+            type=float,
+            default=0.2,
+            help="Fraction of dataset held out for evaluation (default: 0.2)"
+        )
+        parser.add_argument(
+            "--export-path",
+            type=str,
+            default=None,
+            help="Custom path to save the .joblib trained model"
+        )
+        parser.add_argument(
+            "--predict",
+            action="store_true",
+            help="Generate full 2D predicted LULC classification GeoTIFF after training"
+        )
+
+    def handle(self, *args, **options):
+        village_name = options["village"]
+        n_estimators = options["n_estimators"]
+        max_depth = options["max_depth"]
+        test_size = options["test_size"]
+        export_path = options["export_path"]
+        generate_prediction = options["predict"]
+
+        village = Village.objects.filter(name__iexact=village_name.strip()).first()
+        if not village:
+            raise CommandError(f"Village '{village_name}' not found in database.")
+
+        self.stdout.write("=" * 80)
+        self.stdout.write("PIXEL-WISE RANDOM FOREST LULC CLASSIFIER")
+        self.stdout.write(f"Target Village: {village.name} ({village.district}, {village.state})")
+        self.stdout.write(f"Features:       {', '.join(FEATURE_NAMES)}")
+        self.stdout.write(f"Hyperparams:    n_estimators={n_estimators}, max_depth={max_depth}, test_size={test_size}")
+        self.stdout.write("=" * 80)
+
+        # 1. Load and flatten aligned rasters
+        self.stdout.write(f"\n1. Loading and flattening aligned rasters for '{village.name}'...")
+        try:
+            X, y, meta = load_pixel_dataset(village)
+        except Exception as exc:
+            raise CommandError(f"Failed to load dataset: {exc}")
+
+        self.stdout.write(f"  • Total Grid Cells:    {meta['total_raster_cells']:,} pixels")
+        self.stdout.write(f"  • Boundary Nodata (0): {meta['background_cells']:,} pixels (filtered out)")
+        self.stdout.write(self.style.SUCCESS(f"  ✓ Clean Training Pixels: {meta['valid_labeled_cells']:,} samples"))
+
+        # 2. Train Random Forest
+        self.stdout.write("\n2. Training Random Forest model with stratified 80/20 train/test split...")
+        results = train_random_forest_model(
+            X=X,
+            y=y,
+            test_size=test_size,
+            n_estimators=n_estimators,
+            max_depth=max_depth,
+            export_path=export_path
+        )
+
+        acc = results["accuracy"] * 100.0
+        self.stdout.write(self.style.SUCCESS(f"✓ Model Training Complete! Overall Test Accuracy: {acc:.2f}%"))
+        self.stdout.write(f"  • Train Set: {results['n_train']:,} pixels")
+        self.stdout.write(f"  • Test Set:  {results['n_test']:,} pixels")
+
+        # 3. Print Classification Report
+        self.stdout.write("\n" + "=" * 80)
+        self.stdout.write("EVALUATION CLASSIFICATION REPORT (Test Set)")
+        self.stdout.write("=" * 80)
+        self.stdout.write(results["report_str"])
+
+        # 4. Print Feature Importances
+        self.stdout.write("=" * 80)
+        self.stdout.write("FEATURE IMPORTANCES (Gini Impurity Contribution)")
+        self.stdout.write("=" * 80)
+        for feat, score in results["feature_importances"].items():
+            bar_len = int(score * 40)
+            bar = "█" * bar_len + "░" * (40 - bar_len)
+            self.stdout.write(f"  {feat:<12} | {bar} | {score * 100:>5.2f}%")
+
+        # 5. Export Summary
+        self.stdout.write("\n" + "=" * 80)
+        self.stdout.write(self.style.SUCCESS(f"✓ Trained model saved to:    {results['export_path']}"))
+        self.stdout.write(f"  • Training metadata JSON: {results['metadata_path']}")
+
+        # 6. Optional: Generate Full Spatial Prediction Map
+        if generate_prediction:
+            self.stdout.write(f"\n3. Generating 2D predicted LULC classification GeoTIFF for '{village.name}'...")
+            map_path = predict_village_lulc_raster(village, model_path=results["export_path"])
+            self.stdout.write(self.style.SUCCESS(f"✓ Predicted LULC map exported to: {map_path}"))
+
+        self.stdout.write("=" * 80)

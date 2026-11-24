@@ -230,6 +230,15 @@ python backend/manage.py acquire_labels --village Gahmar
 python backend/manage.py acquire_labels --all
 ```
 
+### Train Pixel-Wise Random Forest LULC Classifier
+```bash
+# Train Random Forest classifier on multi-sensor features (SAR + DEM + Slope)
+python backend/manage.py train_rf_model --village Gahmar
+
+# Train and export full 2D predicted LULC classification GeoTIFF map
+python backend/manage.py train_rf_model --village Gahmar --predict
+```
+
 ---
 
 ## 📐 Mathematical & Radar Formulations
@@ -268,7 +277,7 @@ Run the automated test suite covering geospatial models, boundary logic, and sat
 python backend/manage.py test villages satellite --noinput
 ```
 
-All 29 tests verify model integrity, spatial centroid derivations, coordinate projections, and pipeline stability.
+All 35 tests verify model integrity, spatial centroid derivations, coordinate projections, and pipeline stability.
 
 ---
 

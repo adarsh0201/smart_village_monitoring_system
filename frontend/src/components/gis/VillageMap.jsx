@@ -188,6 +188,7 @@ function VillageMap({
           <MapContainer
             center={RAJASTHAN_CENTER}
             zoom={DEFAULT_ZOOM}
+            maxZoom={22}
             scrollWheelZoom={true}
             className="leaflet-map-container"
           >
@@ -202,7 +203,8 @@ function VillageMap({
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  maxZoom={19}
+                  maxNativeZoom={19}
+                  maxZoom={22}
                 />
               </LayersControl.BaseLayer>
 
@@ -210,7 +212,8 @@ function VillageMap({
                 <TileLayer
                   attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
                   url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                  maxZoom={18}
+                  maxNativeZoom={18}
+                  maxZoom={22}
                 />
               </LayersControl.BaseLayer>
 
@@ -218,7 +221,8 @@ function VillageMap({
                 <TileLayer
                   attribution='&copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>'
                   url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-                  maxZoom={19}
+                  maxNativeZoom={19}
+                  maxZoom={22}
                 />
               </LayersControl.BaseLayer>
             </LayersControl>
