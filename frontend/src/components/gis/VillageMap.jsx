@@ -7,12 +7,14 @@ import {
   GeoJSON,
   useMap,
   LayersControl,
+  ImageOverlay,
 } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { RotateCcw, MapPin, Layers } from 'lucide-react';
+import { RotateCcw, MapPin, Layers, Sparkles } from 'lucide-react';
 
 import SpatialInspector from './SpatialInspector';
+import { getVillagePredictedMapUrl, getVillageLulcAnalytics } from '../../services/api';
 
 // Fix Vite asset URL resolution for default Leaflet icons
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -93,9 +95,42 @@ function VillageMap({
 }) {
   const [resetCount, setResetCount] = useState(0);
   const [isInspectorCollapsed, setIsInspectorCollapsed] = useState(false);
+  const [lulcData, setLulcData] = useState(null);
+  const [loadingLulc, setLoadingLulc] = useState(false);
   const markerRefs = useRef({});
 
   const activeVillage = selectedVillage;
+
+  // Fetch LULC AI classification raster & analytics bounds whenever activeVillage changes
+  useEffect(() => {
+    if (!activeVillage?.id) {
+      setLulcData(null);
+      return;
+    }
+    let isCurrent = true;
+    setLoadingLulc(true);
+    getVillageLulcAnalytics(activeVillage.id)
+      .then((data) => {
+        if (isCurrent) {
+          if (data && data.available && data.bounds) {
+            setLulcData(data);
+          } else {
+            setLulcData(null);
+          }
+          setLoadingLulc(false);
+        }
+      })
+      .catch(() => {
+        if (isCurrent) {
+          setLulcData(null);
+          setLoadingLulc(false);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [activeVillage?.id]);
 
   const targetCoordinates = useMemo(() => {
     if (!activeVillage) return null;
@@ -225,6 +260,18 @@ function VillageMap({
                   maxZoom={22}
                 />
               </LayersControl.BaseLayer>
+
+              {/* AI LULC Classification Prediction Layer (Phase 8 Multi-Modal Fusion) */}
+              {lulcData && lulcData.bounds && activeVillage && (
+                <LayersControl.Overlay checked name="AI Land Cover Prediction (Phase 8 Multi-Modal)">
+                  <ImageOverlay
+                    url={getVillagePredictedMapUrl(activeVillage.id)}
+                    bounds={lulcData.bounds}
+                    opacity={0.88}
+                    zIndex={450}
+                  />
+                </LayersControl.Overlay>
+              )}
             </LayersControl>
 
             {/* Official Boundaries (when available) */}
@@ -351,11 +398,61 @@ function VillageMap({
               </div>
             </div>
           </div>
+
+          {/* AI LULC Classification Legend (Floating Top-Right when active) */}
+          {lulcData && lulcData.breakdown && lulcData.breakdown.length > 0 && (
+            <div
+              className="map-legend"
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: isInspectorCollapsed ? '16px' : '360px',
+                bottom: 'auto',
+                maxWidth: '340px',
+                background: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(8px)',
+                boxShadow: 'var(--shadow-md)',
+                zIndex: 800,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span className="legend-title" style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#1b5e20', fontWeight: 700 }}>
+                  <Sparkles size={13} color="#2e7d32" />
+                  AI Land Cover ({activeVillage?.name})
+                </span>
+                <span className="badge badge-green" style={{ fontSize: '11px', padding: '2px 6px' }}>
+                  {lulcData.total_area_hectares} ha
+                </span>
+              </div>
+              <div className="legend-items" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '4px 8px' }}>
+                {lulcData.breakdown.map((item) => (
+                  <div key={`legend-${item.class_id}`} className="legend-item" style={{ alignItems: 'center', fontSize: '11px' }}>
+                    <span
+                      style={{
+                        width: '11px',
+                        height: '11px',
+                        borderRadius: '2px',
+                        backgroundColor: item.color,
+                        display: 'inline-block',
+                        marginRight: '6px',
+                        border: '1px solid rgba(0,0,0,0.15)',
+                        flexShrink: 0,
+                      }}
+                    ></span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.name}: <strong>{item.hectares} ha</strong>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Spatial Inspector Panel */}
         <SpatialInspector
           selectedVillage={activeVillage}
+          lulcData={lulcData}
           onClearSelection={() => onSelectVillage(null)}
           onNavigateToSatellite={onNavigateToSatellite}
           onCenterOnVillage={() => {

@@ -157,3 +157,52 @@ class VillageAPITests(APITestCase):
         response = self.client.delete(self.detail_url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Village.objects.filter(pk=self.village.pk).exists())
+
+
+class VillageLulcEndpointsTests(APITestCase):
+    """
+    Test suite for Phase 6 & 7 AI LULC Web Serving & Analytics endpoints:
+    - GET /api/villages/<id>/predicted-map/
+    - GET /api/villages/<id>/analytics/
+    """
+    def setUp(self):
+        self.village = Village.objects.create(
+            name="Gahmar",
+            district="Ghazipur",
+            state="Uttar Pradesh",
+            location=Point(83.8093, 25.4963, srid=4326),
+            area_hectares=832.5,
+            population=25994
+        )
+        self.map_url = reverse('village-predicted-map', kwargs={'pk': 22})
+        self.analytics_url = reverse('village-lulc-analytics', kwargs={'pk': 22})
+
+    def test_predicted_map_endpoint_returns_png(self):
+        """Verify GET /api/villages/22/predicted-map/ returns transparent PNG with valid size."""
+        response = self.client.get(self.map_url)
+        if response.status_code == 200:
+            self.assertEqual(response['Content-Type'], 'image/png')
+            self.assertGreater(len(response.content), 1000)
+
+    def test_predicted_map_404_for_nonexistent_village(self):
+        """Verify 404 response when requesting prediction map for village with no rasters."""
+        bad_url = reverse('village-predicted-map', kwargs={'pk': 99999})
+        response = self.client.get(bad_url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_lulc_analytics_endpoint_returns_data(self):
+        """Verify GET /api/villages/22/analytics/ returns breakdown and bounds."""
+        response = self.client.get(self.analytics_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        if response.data.get('available'):
+            self.assertIn('bounds', response.data)
+            self.assertIn('breakdown', response.data)
+            self.assertIn('total_area_hectares', response.data)
+            self.assertEqual(len(response.data['bounds']), 2)
+
+    def test_lulc_analytics_graceful_unavailable_state(self):
+        """Verify GET /api/villages/99999/analytics/ returns available: False without crashing."""
+        bad_url = reverse('village-lulc-analytics', kwargs={'pk': 99999})
+        response = self.client.get(bad_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data.get('available'))

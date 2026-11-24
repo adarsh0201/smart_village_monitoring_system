@@ -7,9 +7,11 @@ import {
   GeoJSON,
   useMap,
   LayersControl,
+  ImageOverlay,
 } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { getVillagePredictedMapUrl, getVillageLulcAnalytics } from '../services/api';
 
 // Fix Vite asset URL resolution for default Leaflet icons
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -86,9 +88,33 @@ function VillageMap({
   onRefresh = () => {},
 }) {
   const [resetCount, setResetCount] = useState(0);
+  const [lulcData, setLulcData] = useState(null);
   const markerRefs = useRef({});
 
   const activeVillage = selectedVillage;
+
+  useEffect(() => {
+    if (!activeVillage?.id) {
+      setLulcData(null);
+      return;
+    }
+    let isCurrent = true;
+    getVillageLulcAnalytics(activeVillage.id)
+      .then((data) => {
+        if (isCurrent && data?.available && data?.bounds) {
+          setLulcData(data);
+        } else if (isCurrent) {
+          setLulcData(null);
+        }
+      })
+      .catch(() => {
+        if (isCurrent) setLulcData(null);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [activeVillage?.id]);
 
   // Extract target coordinates for camera flyTo
   const targetCoordinates = useMemo(() => {
@@ -225,6 +251,18 @@ function VillageMap({
                   maxZoom={22}
                 />
               </LayersControl.BaseLayer>
+
+              {/* AI LULC Classification Prediction Layer (Phase 8 Multi-Modal) */}
+              {lulcData && lulcData.bounds && activeVillage && (
+                <LayersControl.Overlay checked name="AI Land Cover Prediction (Phase 8 Multi-Modal)">
+                  <ImageOverlay
+                    url={getVillagePredictedMapUrl(activeVillage.id)}
+                    bounds={lulcData.bounds}
+                    opacity={0.88}
+                    zIndex={450}
+                  />
+                </LayersControl.Overlay>
+              )}
             </LayersControl>
 
             {/* Village GeoJSON Boundaries (when available) */}

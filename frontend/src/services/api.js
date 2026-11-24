@@ -57,4 +57,16 @@ export const computeSceneIndices = async (sceneId, options = {}) => {
   return response.data;
 };
 
+// Get Predicted LULC Transparent PNG map URL (GET /api/villages/<id>/predicted-map/)
+export const getVillagePredictedMapUrl = (villageId, opacity = null) => {
+  const base = `http://127.0.0.1:8000/api/villages/${villageId}/predicted-map/`;
+  return opacity !== null ? `${base}?opacity=${opacity}` : base;
+};
+
+// Fetch LULC hectare analytics breakdown and Leaflet bounds (GET /api/villages/<id>/analytics/)
+export const getVillageLulcAnalytics = async (villageId) => {
+  const response = await api.get(`villages/${villageId}/analytics/`);
+  return response.data;
+};
+
 export default api;

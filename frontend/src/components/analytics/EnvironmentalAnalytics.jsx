@@ -13,8 +13,10 @@ import {
   Download,
   Sliders,
   FileDown,
+  Sparkles,
 } from 'lucide-react';
 import { getSceneIndices, computeSceneIndices } from '../../services/api';
+import LulcAnalyticsDashboard from './LulcAnalyticsDashboard';
 
 export function EnvironmentalAnalytics({
   villages = [],
@@ -176,6 +178,15 @@ export function EnvironmentalAnalytics({
       purpose: 'Removes false positives from village buildings, pacca roofs, and rocky soil while sharply delineating water edges.',
       rajasthanContext: 'Effectively distinguishes village settlement rooftops and stone quarry debris from ephemeral post-monsoon water tanks in rocky Rajasthani terrain.',
     },
+    {
+      id: 'lulc',
+      name: 'AI Land Use & Land Cover (LULC) Classification',
+      shortName: 'AI Land Cover',
+      formula: 'Random Forest 6-Feature Fusion [VV, VH, Elev, Slope, NDVI, NDWI]',
+      icon: Sparkles,
+      color: '#16a34a',
+      isLulc: true,
+    },
   ];
 
   const currentIndex = indices.find((i) => i.id === selectedIndex) || indices[0];
@@ -328,7 +339,16 @@ export function EnvironmentalAnalytics({
         })}
       </div>
 
-      {/* Real Statistics Metrics Grid (5 Stat Cards) */}
+      {/* Conditional: AI LULC Classification Dashboard vs. Spectral Indices */}
+      {selectedIndex === 'lulc' ? (
+        <LulcAnalyticsDashboard
+          villageId={targetVillageId}
+          villageName={activeVillageObj?.name || 'Village'}
+          onNavigateToGis={onNavigateToSatellite}
+        />
+      ) : (
+        <>
+          {/* Real Statistics Metrics Grid (5 Stat Cards) */}
       <div
         style={{
           display: 'grid',
@@ -850,8 +870,10 @@ export function EnvironmentalAnalytics({
           </div>
         </div>
       </div>
-    </div>
-  );
+      </>
+    )}
+  </div>
+);
 }
 
 export default EnvironmentalAnalytics;

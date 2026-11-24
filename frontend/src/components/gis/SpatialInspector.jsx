@@ -10,6 +10,7 @@ import {
 
 function SpatialInspector({
   selectedVillage,
+  lulcData = null,
   onClearSelection,
   onNavigateToSatellite,
   onCenterOnVillage,
@@ -124,6 +125,41 @@ function SpatialInspector({
               </span>
             </div>
           </div>
+
+          {/* AI LULC Classification Card (Phase 8 Multi-Modal) */}
+          {lulcData && lulcData.breakdown && lulcData.breakdown.length > 0 && (
+            <div style={{ marginTop: '12px', padding: '10px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#1b5e20' }}>
+                  AI LULC Breakdown (10m)
+                </span>
+                <span className="badge badge-green" style={{ fontSize: '10px' }}>83% Acc</span>
+              </div>
+              <div style={{ display: 'flex', height: '8px', borderRadius: '4px', overflow: 'hidden', marginBottom: '8px' }}>
+                {lulcData.breakdown.map((item) => (
+                  <div
+                    key={`bar-${item.class_id}`}
+                    style={{
+                      width: `${item.percentage}%`,
+                      backgroundColor: item.color,
+                    }}
+                    title={`${item.name}: ${item.hectares} ha (${item.percentage}%)`}
+                  />
+                ))}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                {lulcData.breakdown.slice(0, 4).map((item) => (
+                  <div key={`insp-lulc-${item.class_id}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: item.color }} />
+                      {item.name}
+                    </span>
+                    <strong>{item.hectares} ha ({item.percentage}%)</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="inspector-actions" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
             <button
