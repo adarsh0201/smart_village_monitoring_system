@@ -364,7 +364,7 @@ def find_village_raster_assets(village):
     if missing:
         raise FileNotFoundError(
             f"Missing required rasters for village '{v.name}' (ID: {v.id}): {', '.join(missing)}. "
-            f"Please run acquire_sentinel1_sar, acquire_dem, and acquire_labels first."
+            f"Please run acquire_sentinel1_sar, acquire_sentinel2_optical, acquire_dem, and acquire_labels first."
         )
 
     return {

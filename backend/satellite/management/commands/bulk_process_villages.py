@@ -6,9 +6,10 @@ registered villages (or a targeted subset) in the PostgreSQL/PostGIS database.
 
 Sequentially executes for each village:
 1. acquire_sentinel1_sar (Sentinel-1 RTC Dual-Pol Backscatter, Cross-Ratio, RVI)
-2. acquire_dem (Copernicus DEM 30m GLO-30 & Topographic Slope)
-3. acquire_labels (ESA WorldCover 10m Ground Truth Masks via nearest-neighbor)
-4. train_rf_model --predict (Phase 8 6-Feature Random Forest Training & 2D GeoTIFF Inference)
+2. acquire_sentinel2_optical (Sentinel-2 Level-2A Optical Bands & Spectral Indices: NDVI, NDWI, SAVI, MNDWI, SCL)
+3. acquire_dem (Copernicus DEM 30m GLO-30 & Topographic Slope)
+4. acquire_labels (ESA WorldCover 10m Ground Truth Masks via nearest-neighbor)
+5. train_rf_model --predict (Phase 8 6-Feature Random Forest Training & 2D GeoTIFF Inference)
 
 Includes robust error-handling, progress telemetry, resume capability, and summary reporting.
 
@@ -38,7 +39,7 @@ logger = logging.getLogger("satellite.bulk_processing")
 
 class Command(BaseCommand):
     help = (
-        "Bulk orchestrator: Sequentially acquires SAR, DEM, ESA WorldCover labels, "
+        "Bulk orchestrator: Sequentially acquires SAR, Optical (Sentinel-2), DEM, ESA WorldCover labels, "
         "and trains the 6-feature Random Forest model with 2D prediction for all villages."
     )
 
@@ -70,8 +71,8 @@ class Command(BaseCommand):
         parser.add_argument(
             "--steps",
             type=str,
-            default="sar,dem,labels,train",
-            help="Comma-separated pipeline stages to run: sar,dem,labels,train (default: all 4)"
+            default="sar,optical,dem,labels,train",
+            help="Comma-separated pipeline stages to run: sar,optical,dem,labels,train (default: all 5)"
         )
         parser.add_argument(
             "--force",
@@ -94,7 +95,7 @@ class Command(BaseCommand):
         exclude_arg = options.get("exclude")
         start_from = options.get("start_from")
         limit = options.get("limit")
-        steps_arg = options.get("steps", "sar,dem,labels,train").lower()
+        steps_arg = options.get("steps", "sar,optical,dem,labels,train").lower()
         force_refresh = options.get("force", False)
         stop_on_error = options.get("stop_on_error", False)
         is_dry_run = options.get("dry_run", False)
@@ -211,7 +212,7 @@ class Command(BaseCommand):
 
             # Stage 1: Sentinel-1 SAR Acquisition & Calibration
             if "sar" in active_steps and not village_failed:
-                self.stdout.write(f"\n  [Stage 1/4] Running acquire_sentinel1_sar for '{v.name}'...")
+                self.stdout.write(f"\n  [Stage 1/5] Running acquire_sentinel1_sar for '{v.name}'...")
                 try:
                     call_command("acquire_sentinel1_sar", village=v.name, force=force_refresh)
                     self.stdout.write(self.style.SUCCESS(f"  ✓ Sentinel-1 SAR acquisition complete for '{v.name}'"))
@@ -222,9 +223,22 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.WARNING(f"  [!] Stage 1 Failed for '{v.name}': {exc}"))
                     logger.warning(f"Bulk pipeline Stage 1 error for {v.name}: {exc}", exc_info=True)
 
-            # Stage 2: Copernicus DEM 30m & Topographic Slope
+            # Stage 2: Sentinel-2 Optical Acquisition & Spectral Indices
+            if "optical" in active_steps and not village_failed:
+                self.stdout.write(f"\n  [Stage 2/5] Running acquire_sentinel2_optical for '{v.name}'...")
+                try:
+                    call_command("acquire_sentinel2_optical", village=v.name, force=force_refresh)
+                    self.stdout.write(self.style.SUCCESS(f"  ✓ Sentinel-2 Optical & Spectral Indices complete for '{v.name}'"))
+                except Exception as exc:
+                    village_failed = True
+                    failed_stage = "acquire_sentinel2_optical"
+                    error_details = str(exc)
+                    self.stdout.write(self.style.WARNING(f"  [!] Stage 2 Failed for '{v.name}': {exc}"))
+                    logger.warning(f"Bulk pipeline Stage 2 (Optical) error for {v.name}: {exc}", exc_info=True)
+
+            # Stage 3: Copernicus DEM 30m & Topographic Slope
             if "dem" in active_steps and not village_failed:
-                self.stdout.write(f"\n  [Stage 2/4] Running acquire_dem for '{v.name}'...")
+                self.stdout.write(f"\n  [Stage 3/5] Running acquire_dem for '{v.name}'...")
                 try:
                     call_command("acquire_dem", village=v.name, force=force_refresh)
                     self.stdout.write(self.style.SUCCESS(f"  ✓ Copernicus DEM & Slope complete for '{v.name}'"))
@@ -232,12 +246,12 @@ class Command(BaseCommand):
                     village_failed = True
                     failed_stage = "acquire_dem"
                     error_details = str(exc)
-                    self.stdout.write(self.style.WARNING(f"  [!] Stage 2 Failed for '{v.name}': {exc}"))
-                    logger.warning(f"Bulk pipeline Stage 2 error for {v.name}: {exc}", exc_info=True)
+                    self.stdout.write(self.style.WARNING(f"  [!] Stage 3 Failed for '{v.name}': {exc}"))
+                    logger.warning(f"Bulk pipeline Stage 3 error for {v.name}: {exc}", exc_info=True)
 
-            # Stage 3: ESA WorldCover 10m Ground Truth Labels
+            # Stage 4: ESA WorldCover 10m Ground Truth Labels
             if "labels" in active_steps and not village_failed:
-                self.stdout.write(f"\n  [Stage 3/4] Running acquire_labels for '{v.name}'...")
+                self.stdout.write(f"\n  [Stage 4/5] Running acquire_labels for '{v.name}'...")
                 try:
                     call_command("acquire_labels", village=v.name, force=force_refresh)
                     self.stdout.write(self.style.SUCCESS(f"  ✓ ESA WorldCover labels aligned for '{v.name}'"))
@@ -245,12 +259,12 @@ class Command(BaseCommand):
                     village_failed = True
                     failed_stage = "acquire_labels"
                     error_details = str(exc)
-                    self.stdout.write(self.style.WARNING(f"  [!] Stage 3 Failed for '{v.name}': {exc}"))
-                    logger.warning(f"Bulk pipeline Stage 3 error for {v.name}: {exc}", exc_info=True)
+                    self.stdout.write(self.style.WARNING(f"  [!] Stage 4 Failed for '{v.name}': {exc}"))
+                    logger.warning(f"Bulk pipeline Stage 4 error for {v.name}: {exc}", exc_info=True)
 
-            # Stage 4: 6-Feature Random Forest Training & 2D Prediction
+            # Stage 5: 6-Feature Random Forest Training & 2D Prediction
             if "train" in active_steps and not village_failed:
-                self.stdout.write(f"\n  [Stage 4/4] Training Random Forest & predicting 2D LULC for '{v.name}'...")
+                self.stdout.write(f"\n  [Stage 5/5] Training Random Forest & predicting 2D LULC for '{v.name}'...")
                 try:
                     call_command("train_rf_model", village=v.name, predict=True)
                     self.stdout.write(self.style.SUCCESS(f"  ✓ Model trained and rf_predicted_lulc.tif exported for '{v.name}'"))
@@ -258,8 +272,8 @@ class Command(BaseCommand):
                     village_failed = True
                     failed_stage = "train_rf_model"
                     error_details = str(exc)
-                    self.stdout.write(self.style.WARNING(f"  [!] Stage 4 Failed for '{v.name}': {exc}"))
-                    logger.warning(f"Bulk pipeline Stage 4 error for {v.name}: {exc}", exc_info=True)
+                    self.stdout.write(self.style.WARNING(f"  [!] Stage 5 Failed for '{v.name}': {exc}"))
+                    logger.warning(f"Bulk pipeline Stage 5 error for {v.name}: {exc}", exc_info=True)
 
             v_elapsed = time.time() - v_start
 
