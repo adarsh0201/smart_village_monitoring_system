@@ -12,6 +12,9 @@ backend/.venv/
 *.py[cod]
 *$py.class
 *.sqlite3
+*.joblib
+models/*.joblib
+backend/ml/models/*.joblib
 
 # Node & Frontend
 frontend/node_modules/

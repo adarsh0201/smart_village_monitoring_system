@@ -17,6 +17,7 @@ from ml.train_random_forest import (
     load_pixel_dataset,
     train_random_forest_model,
     predict_village_lulc_raster,
+    resolve_village_instance,
     FEATURE_NAMES
 )
 
@@ -69,13 +70,16 @@ class Command(BaseCommand):
         export_path = options["export_path"]
         generate_prediction = options["predict"]
 
-        village = Village.objects.filter(name__iexact=village_name.strip()).first()
-        if not village:
-            raise CommandError(f"Village '{village_name}' not found in database.")
+        try:
+            village = resolve_village_instance(village_name)
+        except Exception as exc:
+            raise CommandError(f"Could not resolve village '{village_name}': {exc}")
 
         self.stdout.write("=" * 80)
         self.stdout.write("PIXEL-WISE RANDOM FOREST LULC CLASSIFIER")
-        self.stdout.write(f"Target Village: {village.name} ({village.district}, {village.state})")
+        v_state = getattr(village, "state", "Uttar Pradesh")
+        v_dist = getattr(village, "district", "Ghazipur")
+        self.stdout.write(f"Target Village: {village.name} ({v_dist}, {v_state})")
         self.stdout.write(f"Features:       {', '.join(FEATURE_NAMES)}")
         self.stdout.write(f"Hyperparams:    n_estimators={n_estimators}, max_depth={max_depth}, test_size={test_size}")
         self.stdout.write("=" * 80)

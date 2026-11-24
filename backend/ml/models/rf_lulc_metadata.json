@@ -1,0 +1,82 @@
+{
+  "accuracy": 0.8140652213080295,
+  "feature_importances": {
+    "Elevation": 0.234,
+    "VV_db": 0.189,
+    "NDWI": 0.1803,
+    "Slope": 0.1646,
+    "NDVI": 0.1409,
+    "VH_db": 0.0913
+  },
+  "feature_names": [
+    "VV_db",
+    "VH_db",
+    "Elevation",
+    "Slope",
+    "NDVI",
+    "NDWI"
+  ],
+  "n_samples": 83252,
+  "train_samples": 66601,
+  "test_samples": 16651,
+  "classes_present": {
+    "10": "Tree cover",
+    "30": "Grassland",
+    "40": "Cropland",
+    "50": "Built-up",
+    "60": "Bare / sparse veg",
+    "80": "Permanent water"
+  },
+  "classification_report": {
+    "Tree cover (10)": {
+      "precision": 0.4663126452041155,
+      "recall": 0.7497331910352187,
+      "f1-score": 0.5749948843871496,
+      "support": 1874.0
+    },
+    "Grassland (30)": {
+      "precision": 0.32642487046632124,
+      "recall": 0.5220994475138122,
+      "f1-score": 0.40170031880977686,
+      "support": 362.0
+    },
+    "Cropland (40)": {
+      "precision": 0.9381012658227849,
+      "recall": 0.8043195137833731,
+      "f1-score": 0.8660745588407152,
+      "support": 9214.0
+    },
+    "Built-up (50)": {
+      "precision": 0.8149010477299186,
+      "recall": 0.8012209080503625,
+      "f1-score": 0.8080030781069643,
+      "support": 2621.0
+    },
+    "Bare / sparse veg (60)": {
+      "precision": 0.5595854922279793,
+      "recall": 0.84375,
+      "f1-score": 0.6728971962616822,
+      "support": 128.0
+    },
+    "Permanent water (80)": {
+      "precision": 0.980326496442026,
+      "recall": 0.9551386623164764,
+      "f1-score": 0.967568684156166,
+      "support": 2452.0
+    },
+    "accuracy": 0.8140652213080295,
+    "macro avg": {
+      "precision": 0.6809419696488576,
+      "recall": 0.7793769537832071,
+      "f1-score": 0.7152064534270757,
+      "support": 16651.0
+    },
+    "weighted avg": {
+      "precision": 0.8556209189774553,
+      "recall": 0.8140652213080295,
+      "f1-score": 0.8275390208575927,
+      "support": 16651.0
+    }
+  },
+  "trained_at": "2026-11-24T17:30:00"
+}
