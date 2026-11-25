@@ -49,8 +49,9 @@ export function EnvironmentalAnalytics({
   scenes = [],
   onNavigateToSatellite = () => {},
   onNavigateToGis = null,
+  initialIndex = 'ndvi',
 }) {
-  const [selectedIndex, setSelectedIndex] = useState('ndvi');
+  const [selectedIndex, setSelectedIndex] = useState(initialIndex);
   const [selectedSceneId, setSelectedSceneId] = useState('');
   const [indicesState, setIndicesState] = useState({ sceneId: '', data: [] });
   const [isComputing, setIsComputing] = useState(false);

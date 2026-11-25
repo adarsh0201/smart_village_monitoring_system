@@ -1,23 +1,26 @@
 @import 'leaflet/dist/leaflet.css';
+@import 'tailwindcss';
 @import './styles/theme.css';
 @import './styles/variables.css';
 @import './styles/layout.css';
 @import './styles/components.css';
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 
-body {
-  font-family: var(--font-family);
-  background-color: var(--color-bg);
-  color: var(--color-text-primary);
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  min-height: 100vh;
-  font-size: var(--text-size-base);
+  body {
+    font-family: var(--font-family);
+    background-color: var(--color-bg);
+    color: var(--color-text-primary);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    font-size: var(--text-size-base);
+  }
 }
 
 #root {
@@ -36,6 +39,14 @@ body {
   image-rendering: pixelated;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
+}
+
+/* Protect Leaflet map tiles and markers from Tailwind Preflight img max-width: 100% */
+.leaflet-container .leaflet-tile,
+.leaflet-container .leaflet-marker-icon,
+.leaflet-container .leaflet-marker-shadow {
+  max-width: none !important;
+  max-height: none !important;
 }
 
 .leaflet-container {

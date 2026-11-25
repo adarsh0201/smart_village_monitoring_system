@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Home,
   LayoutDashboard,
   Map,
   Building2,
@@ -27,6 +28,7 @@ function Sidebar({
     {
       title: 'Geospatial Workspaces',
       items: [
+        { id: 'landing', label: 'Gram Darpan Home', icon: Home },
         { id: 'overview', label: 'Overview', icon: LayoutDashboard },
         { id: 'gis', label: 'GIS Explorer', icon: Map, badge: villageCount > 0 ? villageCount : null },
         { id: 'villages', label: 'Village Registry', icon: Building2 },
@@ -58,8 +60,8 @@ function Sidebar({
           </div>
           {!isCollapsed && (
             <div className="brand-text-block">
-              <span className="brand-title">Smart Village Monitor</span>
-              <span className="brand-subtitle">WebGIS &bull; Earth Observation</span>
+              <span className="brand-title">Gram Darpan</span>
+              <span className="brand-subtitle">Smart Village WebGIS</span>
             </div>
           )}
         </div>

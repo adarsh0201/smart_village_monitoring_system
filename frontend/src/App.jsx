@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import LandingPage from './components/landing/LandingPage';
 import AppLayout from './components/layout/AppLayout';
 import Overview from './components/dashboard/Overview';
 import VillageMap from './components/gis/VillageMap';
@@ -12,7 +13,8 @@ import ErrorState from './components/common/ErrorState';
 import { getApiStatus, getVillages, getSatelliteScenes } from './services/api';
 
 function App() {
-  const [activePage, setActivePage] = useState('overview');
+  const [activePage, setActivePage] = useState('landing');
+  const [analyticsInitialTab, setAnalyticsInitialTab] = useState('ndvi');
   const [villages, setVillages] = useState([]);
   const [selectedVillage, setSelectedVillage] = useState(null);
   const [scenes, setScenes] = useState([]);
@@ -119,17 +121,34 @@ function App() {
   }, []);
 
   // Cross-page navigation helper
-  const navigateTo = (page, village = null) => {
+  const navigateTo = (page, village = null, options = {}) => {
+    if (options.initialTab) {
+      setAnalyticsInitialTab(options.initialTab);
+    } else if (page === 'analytics') {
+      setAnalyticsInitialTab('ndvi');
+    }
     setActivePage(page);
     if (village) {
       setSelectedVillage(village);
     }
   };
 
+  if (activePage === 'landing') {
+    return (
+      <LandingPage
+        onOpenDashboard={() => navigateTo('overview')}
+        onNavigateModule={(page, options) => navigateTo(page, null, options)}
+        villageCount={villages.length}
+        sceneCount={scenes.length}
+        isConnected={isConnected}
+      />
+    );
+  }
+
   return (
     <AppLayout
       activePage={activePage}
-      onNavigate={setActivePage}
+      onNavigate={(page) => navigateTo(page)}
       villages={villages}
       scenes={scenes}
       selectedVillage={selectedVillage}
@@ -197,12 +216,14 @@ function App() {
 
           {activePage === 'analytics' && (
             <EnvironmentalAnalytics
+              key={`analytics-${analyticsInitialTab}`}
               villages={villages}
               selectedVillage={selectedVillage}
               onSelectVillage={setSelectedVillage}
               scenes={scenes}
               onNavigateToSatellite={() => navigateTo('satellite')}
               onNavigateToGis={() => navigateTo('gis')}
+              initialIndex={analyticsInitialTab}
             />
           )}
 
