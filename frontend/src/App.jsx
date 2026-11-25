@@ -202,6 +202,7 @@ function App() {
               onSelectVillage={setSelectedVillage}
               scenes={scenes}
               onNavigateToSatellite={() => navigateTo('satellite')}
+              onNavigateToGis={() => navigateTo('gis')}
             />
           )}
 

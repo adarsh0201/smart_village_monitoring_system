@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Sparkles,
   Layers,
   MapPin,
-  TrendingUp,
   RefreshCw,
   ExternalLink,
   Sliders,
-  CheckCircle2,
   AlertCircle,
   Trees,
   Wheat,
@@ -22,7 +20,6 @@ import {
   ImageOverlay,
   LayersControl,
 } from 'react-leaflet';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getVillageLulcAnalytics, getVillagePredictedMapUrl } from '../../services/api';
 
@@ -40,36 +37,62 @@ export function LulcAnalyticsDashboard({
   villageName = 'Village',
   onNavigateToGis = null,
 }) {
-  const [analytics, setAnalytics] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [analyticsState, setAnalyticsState] = useState({ villageId: null, data: null, error: null });
+  const [loadedVillageId, setLoadedVillageId] = useState(null);
+  const [refreshTick, setRefreshTick] = useState(0);
   const [overlayOpacity, setOverlayOpacity] = useState(85);
 
-  const fetchAnalytics = async () => {
-    if (!villageId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getVillageLulcAnalytics(villageId);
-      setAnalytics(data);
-    } catch (err) {
-      console.error('Failed to load LULC analytics:', err);
-      setError(err?.response?.data?.error || err.message || 'Failed to fetch analytics');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loading = Boolean(villageId) && loadedVillageId !== `${villageId}:${refreshTick}`;
+  const analytics = analyticsState.villageId === `${villageId}:${refreshTick}` ? analyticsState.data : null;
+  const error = analyticsState.villageId === `${villageId}:${refreshTick}` ? analyticsState.error : null;
 
   useEffect(() => {
-    fetchAnalytics();
-  }, [villageId]);
+    if (!villageId) return;
+    let isCurrent = true;
+    const key = `${villageId}:${refreshTick}`;
+    getVillageLulcAnalytics(villageId)
+      .then((data) => {
+        if (isCurrent) {
+          setAnalyticsState({ villageId: key, data, error: null });
+          setLoadedVillageId(key);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load LULC analytics:', err);
+        if (isCurrent) {
+          setAnalyticsState({
+            villageId: key,
+            data: null,
+            error: err?.response?.data?.error || err.message || 'Failed to fetch analytics',
+          });
+          setLoadedVillageId(key);
+        }
+      });
+    return () => {
+      isCurrent = false;
+    };
+  }, [villageId, refreshTick]);
+
+  const fetchAnalytics = useCallback(() => {
+    setRefreshTick((t) => t + 1);
+  }, []);
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', minHeight: '380px' }}>
-        <div className="spinner" style={{ width: '36px', height: '36px', marginBottom: '16px' }}></div>
-        <span style={{ fontSize: '14px', color: 'var(--color-text-secondary)' }}>
-          Extracting AI LULC pixel statistics & raster boundaries for {villageName}...
+      <div
+        className="card"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '60px 24px',
+          minHeight: '380px',
+        }}
+      >
+        <div className="spinner" style={{ marginBottom: '16px' }}></div>
+        <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+          Extracting Land Use &amp; Land Cover statistics for {villageName}...
         </span>
       </div>
     );
@@ -78,12 +101,13 @@ export function LulcAnalyticsDashboard({
   if (error) {
     return (
       <div className="alert-banner alert-danger" style={{ margin: '20px 0' }}>
-        <AlertCircle size={20} />
+        <AlertCircle size={20} aria-hidden="true" />
         <div style={{ flex: 1 }}>
           <strong>Error loading LULC analytics:</strong> {error}
         </div>
         <button type="button" className="btn btn-secondary btn-sm" onClick={fetchAnalytics}>
-          <RefreshCw size={13} /> Retry
+          <RefreshCw size={14} aria-hidden="true" />
+          <span>Retry Loading</span>
         </button>
       </div>
     );
@@ -91,15 +115,43 @@ export function LulcAnalyticsDashboard({
 
   if (!analytics || !analytics.available) {
     return (
-      <div style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '12px', padding: '40px 24px', textAlign: 'center', margin: '20px 0' }}>
-        <Sparkles size={36} color="#94a3b8" style={{ marginBottom: '12px' }} />
-        <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-          AI Classification Pending for {villageName}
+      <div
+        style={{
+          background: 'var(--color-surface-muted)',
+          border: '1px dashed var(--color-border-dark)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '44px 24px',
+          textAlign: 'center',
+          margin: '20px 0',
+        }}
+      >
+        <Sparkles size={36} style={{ color: 'var(--color-primary)', marginBottom: '12px' }} aria-hidden="true" />
+        <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '8px' }}>
+          Land Cover Classification Pending for {villageName}
         </h3>
-        <p style={{ fontSize: '13px', color: '#64748b', maxWidth: '480px', margin: '0 auto 16px auto', lineHeight: 1.5 }}>
-          The multi-modal Random Forest model has not yet been executed for this village. You can generate it by running the Django command:
+        <p
+          style={{
+            fontSize: '14.5px',
+            color: 'var(--color-text-secondary)',
+            maxWidth: '520px',
+            margin: '0 auto 18px auto',
+            lineHeight: 1.6,
+          }}
+        >
+          The multi-modal Random Forest model has not yet generated a land cover map for this village. Execute the backend pipeline command:
         </p>
-        <code style={{ display: 'inline-block', background: '#0f172a', color: '#38bdf8', padding: '8px 16px', borderRadius: '6px', fontSize: '12px', fontFamily: 'monospace' }}>
+        <code
+          style={{
+            display: 'inline-block',
+            background: 'var(--color-surface)',
+            color: 'var(--color-text-primary)',
+            border: '1px solid var(--color-border-dark)',
+            padding: '10px 18px',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '13.5px',
+            fontFamily: 'var(--font-mono)',
+          }}
+        >
           python manage.py train_rf_model --village {villageName} --predict
         </code>
       </div>
@@ -111,8 +163,6 @@ export function LulcAnalyticsDashboard({
     valid_pixels,
     bounds,
     breakdown = [],
-    model_type,
-    features,
   } = analytics;
 
   // Key KPI classes
@@ -120,176 +170,266 @@ export function LulcAnalyticsDashboard({
   const treeCover = breakdown.find((c) => c.class_id === 10);
   const builtUp = breakdown.find((c) => c.class_id === 50);
   const water = breakdown.find((c) => c.class_id === 80);
-  const grassland = breakdown.find((c) => c.class_id === 30);
 
   // Map center from bounds
   const centerLat = bounds ? (bounds[0][0] + bounds[1][0]) / 2 : 25.496;
   const centerLng = bounds ? (bounds[0][1] + bounds[1][1]) / 2 : 83.809;
 
   return (
-    <div className="lulc-analytics-dashboard" style={{ marginTop: '16px' }}>
-      {/* Model Spec Banner */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-          background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)',
-          border: '1px solid #bbf7d0',
-          borderRadius: '10px',
-          padding: '14px 18px',
-          marginBottom: '20px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff' }}>
-            <Sparkles size={22} />
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#14532d', margin: 0 }}>
-                Phase 8 AI Land Use & Land Cover Classification
-              </h3>
-              <span className="badge badge-green" style={{ fontSize: '11px', padding: '3px 8px' }}>
-                83.02% Accuracy
-              </span>
-              <span className="badge badge-blue" style={{ fontSize: '11px', padding: '3px 8px' }}>
-                10m Metric Grid
-              </span>
-            </div>
-            <p style={{ fontSize: '12px', color: '#166534', margin: '4px 0 0 0' }}>
-              <strong>Multi-Modal Feature Stack:</strong> Sentinel-1 SAR (VV, VH) + Copernicus DEM (Elevation, Slope) + Sentinel-2 Optical (NDVI, NDWI) with SCL Cloud Masking
-            </p>
-          </div>
+    <div className="lulc-analytics-dashboard" style={{ marginTop: '12px' }}>
+      {/* Editorial Section 1 Header */}
+      <div className="report-section-header">
+        <div>
+          <h2 className="report-section-title">
+            1. AI Land Use &amp; Land Cover Summary — {villageName}
+          </h2>
+          <p className="report-section-subtitle">
+            Multi-modal fusion combining Sentinel-1 SAR, Copernicus DEM topography, and Sentinel-2 optical indices
+          </p>
         </div>
-
         <button
           type="button"
           className="btn btn-secondary btn-sm"
           onClick={fetchAnalytics}
           title="Reload LULC statistics"
         >
-          <RefreshCw size={13} /> Refresh
+          <RefreshCw size={14} aria-hidden="true" />
+          <span>Refresh Statistics</span>
         </button>
+      </div>
+
+      {/* Institutional Model Spec Notice (Solid Earth Surface — No Gradients/Neon) */}
+      <div
+        className="card"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '14px',
+          background: 'var(--color-success-bg)',
+          borderColor: 'var(--color-success-border)',
+          padding: '16px 20px',
+          marginBottom: '22px',
+          boxShadow: 'none',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--color-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#ffffff',
+              flexShrink: 0,
+            }}
+          >
+            <Sparkles size={22} aria-hidden="true" />
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-primary-dark)', margin: 0 }}>
+                Phase 8 Land Cover Classification Specification
+              </h3>
+              <span className="badge badge-green">83.02% Model Accuracy</span>
+              <span className="badge badge-blue">10m Metric Grid</span>
+            </div>
+            <p style={{ fontSize: '13.5px', color: 'var(--color-text-primary)', margin: '5px 0 0 0', lineHeight: 1.5 }}>
+              <strong>Feature Stack:</strong> Sentinel-1 SAR (VV, VH) + Copernicus DEM (Elevation, Slope) + Sentinel-2 Optical (NDVI, NDWI) with SCL Cloud Masking
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Top Stat Cards (KPIs) */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '14px',
-          marginBottom: '24px',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+          gap: '16px',
+          marginBottom: '26px',
         }}
       >
         {/* Total Area */}
-        <div className="card" style={{ padding: '16px', background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Total Village Area</span>
-            <MapPin size={18} color="#0284c7" />
+        <div className="card" style={{ padding: '18px 20px', marginBottom: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <span className="kpi-label">Total Assessed Area</span>
+            <MapPin size={18} style={{ color: 'var(--color-info)' }} aria-hidden="true" />
           </div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>
-            {total_area_hectares.toLocaleString()} <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>ha</span>
+          <div style={{ fontSize: '26px', fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: 'var(--font-mono)' }}>
+            {total_area_hectares.toLocaleString()}{' '}
+            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>ha</span>
           </div>
-          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+          <div className="kpi-subtext" style={{ marginTop: '6px' }}>
             {valid_pixels?.toLocaleString()} aligned 10m grid cells
           </div>
         </div>
 
         {/* Cropland */}
-        <div className="card" style={{ padding: '16px', background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)', borderLeft: '4px solid #4caf50' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Cropland</span>
-            <Wheat size={18} color="#4caf50" />
+        <div
+          className="card"
+          style={{
+            padding: '18px 20px',
+            marginBottom: 0,
+            borderLeft: '4px solid #4A7C59',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <span className="kpi-label">Cropland</span>
+            <Wheat size={18} style={{ color: '#4A7C59' }} aria-hidden="true" />
           </div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: '#1b5e20' }}>
-            {cropland ? cropland.hectares : 0} <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>ha</span>
+          <div style={{ fontSize: '26px', fontWeight: 700, color: 'var(--color-primary-dark)', fontFamily: 'var(--font-mono)' }}>
+            {cropland ? cropland.hectares : 0}{' '}
+            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>ha</span>
           </div>
-          <div style={{ fontSize: '11px', color: '#4caf50', fontWeight: 600, marginTop: '4px' }}>
-            {cropland ? `${cropland.percentage}% of village area` : '0%'}
+          <div style={{ fontSize: '13px', color: 'var(--color-success)', fontWeight: 600, marginTop: '6px' }}>
+            {cropland ? `${cropland.percentage}% of village area` : '0% of village area'}
           </div>
         </div>
 
         {/* Tree Cover */}
-        <div className="card" style={{ padding: '16px', background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)', borderLeft: '4px solid #1b5e20' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Tree Canopy</span>
-            <Trees size={18} color="#1b5e20" />
+        <div
+          className="card"
+          style={{
+            padding: '18px 20px',
+            marginBottom: 0,
+            borderLeft: '4px solid #2D5A3C',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <span className="kpi-label">Tree Canopy</span>
+            <Trees size={18} style={{ color: '#2D5A3C' }} aria-hidden="true" />
           </div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: '#1b5e20' }}>
-            {treeCover ? treeCover.hectares : 0} <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>ha</span>
+          <div style={{ fontSize: '26px', fontWeight: 700, color: '#2D5A3C', fontFamily: 'var(--font-mono)' }}>
+            {treeCover ? treeCover.hectares : 0}{' '}
+            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>ha</span>
           </div>
-          <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, marginTop: '4px' }}>
-            {treeCover ? `${treeCover.percentage}% of village area` : '0%'}
+          <div style={{ fontSize: '13px', color: 'var(--color-success)', fontWeight: 600, marginTop: '6px' }}>
+            {treeCover ? `${treeCover.percentage}% of village area` : '0% of village area'}
           </div>
         </div>
 
         {/* Built-up */}
-        <div className="card" style={{ padding: '16px', background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)', borderLeft: '4px solid #f44336' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Settlements</span>
-            <Home size={18} color="#f44336" />
+        <div
+          className="card"
+          style={{
+            padding: '18px 20px',
+            marginBottom: 0,
+            borderLeft: '4px solid var(--color-error)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <span className="kpi-label">Settlements</span>
+            <Home size={18} style={{ color: 'var(--color-error)' }} aria-hidden="true" />
           </div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: '#b91c1c' }}>
-            {builtUp ? builtUp.hectares : 0} <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>ha</span>
+          <div style={{ fontSize: '26px', fontWeight: 700, color: 'var(--color-error)', fontFamily: 'var(--font-mono)' }}>
+            {builtUp ? builtUp.hectares : 0}{' '}
+            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>ha</span>
           </div>
-          <div style={{ fontSize: '11px', color: '#ef4444', fontWeight: 600, marginTop: '4px' }}>
-            {builtUp ? `${builtUp.percentage}% of village area` : '0%'}
+          <div style={{ fontSize: '13px', color: 'var(--color-error)', fontWeight: 600, marginTop: '6px' }}>
+            {builtUp ? `${builtUp.percentage}% of village area` : '0% of village area'}
           </div>
         </div>
 
         {/* Water Bodies */}
-        <div className="card" style={{ padding: '16px', background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)', borderLeft: '4px solid #2196f3' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Water Bodies</span>
-            <Waves size={18} color="#2196f3" />
+        <div
+          className="card"
+          style={{
+            padding: '18px 20px',
+            marginBottom: 0,
+            borderLeft: '4px solid var(--color-info)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <span className="kpi-label">Water Bodies</span>
+            <Waves size={18} style={{ color: 'var(--color-info)' }} aria-hidden="true" />
           </div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: '#0369a1' }}>
-            {water ? water.hectares : 0} <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>ha</span>
+          <div style={{ fontSize: '26px', fontWeight: 700, color: 'var(--color-info)', fontFamily: 'var(--font-mono)' }}>
+            {water ? water.hectares : 0}{' '}
+            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>ha</span>
           </div>
-          <div style={{ fontSize: '11px', color: '#0284c7', fontWeight: 600, marginTop: '4px' }}>
-            {water ? `${water.percentage}% of village area` : '0%'}
+          <div style={{ fontSize: '13px', color: 'var(--color-info)', fontWeight: 600, marginTop: '6px' }}>
+            {water ? `${water.percentage}% of village area` : '0% of village area'}
           </div>
         </div>
       </div>
 
-      {/* Main Grid: Distribution Chart + Spatial Map View */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(440px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-        {/* Left Column: Proportional Chart & Class Breakdown Table */}
-        <div className="card" style={{ padding: '20px', background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-            <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', margin: 0 }}>
-              Land Cover Composition & Area Breakdown
-            </h4>
-            <span style={{ fontSize: '12px', color: '#64748b' }}>10m Resolution</span>
+      {/* Editorial Section 2 Header */}
+      <div className="report-section-header">
+        <div>
+          <h2 className="report-section-title">
+            2. Hectare Composition &amp; Cartographic Map View
+          </h2>
+          <p className="report-section-subtitle">
+            Detailed class-by-class area ledger alongside spatial verification basemap
+          </p>
+        </div>
+      </div>
+
+      {/* Main Grid: Distribution Breakdown + Spatial Map View */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(440px, 1fr))',
+          gap: '22px',
+          marginBottom: '24px',
+        }}
+      >
+        {/* Left Column: Proportional Chart & Class Breakdown List */}
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div className="card-header">
+            <div className="card-title-group">
+              <h3 className="card-title">Land Cover Composition &amp; Area Breakdown</h3>
+              <p className="card-subtitle">Hectares computed at 100 m&sup2; per grid cell</p>
+            </div>
+            <span className="badge badge-gray">10m Resolution</span>
           </div>
 
           {/* Stacked Proportional Distribution Bar */}
-          <div style={{ marginBottom: '18px' }}>
-            <div style={{ display: 'flex', height: '18px', borderRadius: '6px', overflow: 'hidden', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)' }}>
+          <div style={{ marginBottom: '20px' }}>
+            <div
+              style={{
+                display: 'flex',
+                height: '20px',
+                borderRadius: 'var(--radius-sm)',
+                overflow: 'hidden',
+                border: '1px solid var(--color-border-dark)',
+              }}
+            >
               {breakdown.map((item) => (
                 <div
                   key={`stacked-${item.class_id}`}
                   style={{
                     width: `${item.percentage}%`,
                     backgroundColor: item.color,
-                    transition: 'width 0.4s ease',
+                    transition: 'width 0.35s ease',
                   }}
                   title={`${item.name}: ${item.hectares} ha (${item.percentage}%)`}
                 />
               ))}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', marginTop: '6px' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: 'var(--color-text-muted)',
+                marginTop: '6px',
+              }}
+            >
               <span>0%</span>
-              <span>Village Land Distribution</span>
+              <span>Village Land Distribution Share</span>
               <span>100%</span>
             </div>
           </div>
 
-          {/* Class Breakdown List / Table */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* Class Breakdown Rows */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {breakdown.map((item) => {
               const IconComponent = CLASS_ICONS[item.class_id] || Grid;
               return (
@@ -299,18 +439,18 @@ export function LulcAnalyticsDashboard({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    background: '#f8fafc',
-                    border: '1px solid #f1f5f9',
+                    padding: '12px 14px',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--color-surface-muted)',
+                    border: '1px solid var(--color-border-light)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div
                       style={{
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '6px',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: 'var(--radius-sm)',
                         backgroundColor: item.color,
                         display: 'flex',
                         alignItems: 'center',
@@ -319,23 +459,24 @@ export function LulcAnalyticsDashboard({
                         flexShrink: 0,
                       }}
                     >
-                      <IconComponent size={15} />
+                      <IconComponent size={16} aria-hidden="true" />
                     </div>
                     <div>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
+                      <div style={{ fontSize: '14.5px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
                         {item.name}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#64748b' }}>
+                      <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
                         {item.description}
                       </div>
                     </div>
                   </div>
 
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
-                      {item.hectares.toLocaleString()} <span style={{ fontSize: '11px', fontWeight: 500, color: '#64748b' }}>ha</span>
+                    <div style={{ fontSize: '15.5px', fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: 'var(--font-mono)' }}>
+                      {item.hectares.toLocaleString()}{' '}
+                      <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>ha</span>
                     </div>
-                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#16a34a' }}>
+                    <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--color-primary-dark)' }}>
                       {item.percentage}% ({item.pixels?.toLocaleString()} px)
                     </div>
                   </div>
@@ -346,13 +487,21 @@ export function LulcAnalyticsDashboard({
         </div>
 
         {/* Right Column: Embedded Leaflet Map Preview */}
-        <div className="card" style={{ padding: '20px', background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Layers size={17} color="#2e7d32" />
-              <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', margin: 0 }}>
-                Spatial LULC Map Overlay (Gahmar)
-              </h4>
+        <div
+          className="card"
+          style={{
+            marginBottom: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <div className="card-header">
+            <div className="card-title-group">
+              <h3 className="card-title">
+                <Layers size={18} style={{ color: 'var(--color-primary)' }} aria-hidden="true" />
+                <span>Spatial LULC Map Overlay ({villageName})</span>
+              </h3>
+              <p className="card-subtitle">Georeferenced raster overlaid on reference imagery</p>
             </div>
 
             {onNavigateToGis && (
@@ -360,44 +509,79 @@ export function LulcAnalyticsDashboard({
                 type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={onNavigateToGis}
-                style={{ fontSize: '11px', padding: '4px 8px' }}
               >
-                <ExternalLink size={12} /> GIS Explorer
+                <ExternalLink size={14} aria-hidden="true" />
+                <span>Open GIS Explorer</span>
               </button>
             )}
           </div>
 
           {/* Opacity Control Slider */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#f8fafc', padding: '6px 12px', borderRadius: '6px', marginBottom: '12px' }}>
-            <Sliders size={14} color="#64748b" />
-            <span style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Overlay Opacity:</span>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              background: 'var(--color-surface-muted)',
+              border: '1px solid var(--color-border-light)',
+              padding: '8px 14px',
+              borderRadius: 'var(--radius-sm)',
+              marginBottom: '14px',
+            }}
+          >
+            <Sliders size={15} style={{ color: 'var(--color-primary)' }} aria-hidden="true" />
+            <label
+              htmlFor="lulc-opacity-slider"
+              style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--color-text-secondary)' }}
+            >
+              Overlay Opacity:
+            </label>
             <input
+              id="lulc-opacity-slider"
               type="range"
               min="10"
               max="100"
               value={overlayOpacity}
               onChange={(e) => setOverlayOpacity(Number(e.target.value))}
-              style={{ flex: 1, accentColor: '#16a34a' }}
+              style={{ flex: 1, accentColor: 'var(--color-primary)', cursor: 'pointer' }}
             />
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#1e293b', minWidth: '32px' }}>
+            <span
+              style={{
+                fontSize: '13px',
+                fontWeight: 700,
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--color-text-primary)',
+                minWidth: '38px',
+                textAlign: 'right',
+              }}
+            >
               {overlayOpacity}%
             </span>
           </div>
 
           {/* Leaflet Map Preview Container */}
-          <div style={{ flex: 1, minHeight: '320px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #cbd5e1', position: 'relative' }}>
+          <div
+            style={{
+              flex: 1,
+              minHeight: '340px',
+              borderRadius: 'var(--radius-md)',
+              overflow: 'hidden',
+              border: '1px solid var(--color-border-dark)',
+              position: 'relative',
+            }}
+          >
             {bounds && (
               <MapContainer
                 center={[centerLat, centerLng]}
                 zoom={13}
                 maxZoom={22}
                 scrollWheelZoom={true}
-                style={{ width: '100%', height: '100%', minHeight: '320px' }}
+                style={{ width: '100%', height: '100%', minHeight: '340px' }}
               >
                 <LayersControl position="topright">
                   <LayersControl.BaseLayer checked name="Satellite Imagery">
                     <TileLayer
-                      attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS'
+                      attribution="Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS"
                       url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                       maxNativeZoom={18}
                       maxZoom={22}
@@ -405,7 +589,7 @@ export function LulcAnalyticsDashboard({
                   </LayersControl.BaseLayer>
                   <LayersControl.BaseLayer name="OpenStreetMap">
                     <TileLayer
-                      attribution='&copy; OpenStreetMap contributors'
+                      attribution="&copy; OpenStreetMap contributors"
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                       maxNativeZoom={19}
                       maxZoom={22}
@@ -424,27 +608,40 @@ export function LulcAnalyticsDashboard({
               </MapContainer>
             )}
 
-            {/* Embedded Floating Map Legend */}
+            {/* Embedded Solid Paper Map Legend (No Glassmorphism Blur) */}
             <div
               style={{
                 position: 'absolute',
                 bottom: '12px',
                 left: '12px',
                 zIndex: 1000,
-                background: 'rgba(255, 255, 255, 0.94)',
-                backdropFilter: 'blur(4px)',
-                borderRadius: '6px',
-                padding: '8px 10px',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                background: '#FFFFFF',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '10px 12px',
+                boxShadow: 'var(--shadow-md)',
                 display: 'grid',
                 gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: '4px 10px',
-                fontSize: '11px',
+                gap: '6px 12px',
+                fontSize: '12.5px',
+                fontWeight: 600,
+                color: 'var(--color-text-primary)',
               }}
             >
               {breakdown.map((item) => (
-                <div key={`legend-chip-${item.class_id}`} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <span style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: item.color }} />
+                <div
+                  key={`legend-chip-${item.class_id}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <span
+                    style={{
+                      width: '11px',
+                      height: '11px',
+                      borderRadius: '2px',
+                      backgroundColor: item.color,
+                      border: '1px solid rgba(44, 42, 41, 0.2)',
+                    }}
+                  />
                   <span>{item.name}</span>
                 </div>
               ))}

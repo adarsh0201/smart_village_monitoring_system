@@ -370,7 +370,7 @@ export function SceneDiscovery({
                     const isDownloaded = scene.is_downloaded || ingestedSceneIds.has(scene.scene_id);
 
                     return (
-                      <tr key={scene.scene_id} style={{ background: isDownloaded ? 'rgba(23, 107, 58, 0.03)' : undefined }}>
+                      <tr key={scene.scene_id} style={{ background: isDownloaded ? 'var(--color-success-bg)' : undefined }}>
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: '12px', color: 'var(--color-text-primary)' }}>
@@ -413,9 +413,9 @@ export function SceneDiscovery({
                                     fontWeight: 600,
                                     padding: '1px 5px',
                                     borderRadius: '3px',
-                                    background: isPresent ? '#e8f5e9' : 'var(--color-surface-hover)',
-                                    color: isPresent ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                                    border: isPresent ? '1px solid #c8e6c9' : '1px dashed var(--color-border)',
+                                    background: isPresent ? 'var(--color-success-bg)' : 'var(--color-surface-hover)',
+                                    color: isPresent ? 'var(--color-primary-dark)' : 'var(--color-text-muted)',
+                                    border: isPresent ? '1px solid var(--color-success-border)' : '1px dashed var(--color-border)',
                                   }}
                                   title={isPresent ? `Band ${b} available on STAC` : `Band ${b} unavailable`}
                                 >

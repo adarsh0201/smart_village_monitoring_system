@@ -61,7 +61,8 @@ export function SatellitePage({
             onClick={onRefreshScenes}
             title="Refresh satellite scenes from PostGIS"
           >
-            <RefreshCw size={14} />
+            <RefreshCw size={14} aria-hidden="true" />
+            <span>Refresh Scenes</span>
           </button>
         </div>
       </div>

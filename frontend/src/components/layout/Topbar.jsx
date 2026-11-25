@@ -2,7 +2,7 @@ import React from 'react';
 import { Menu, RefreshCw, MapPin, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 const PAGE_TITLES = {
-  overview: 'Overview Dashboard',
+  overview: 'Executive Monitoring Overview',
   gis: 'GIS Explorer & Spatial Mapping',
   villages: 'Village Registry & Administrative Units',
   satellite: 'Sentinel-2 Satellite Imagery Acquisition',
@@ -30,14 +30,17 @@ function Topbar({
           type="button"
           className="btn-mobile-menu"
           onClick={onOpenMobile}
-          aria-label="Open mobile navigation"
+          aria-label="Open navigation menu"
         >
-          <Menu size={20} />
+          <Menu size={18} />
+          <span>Menu</span>
         </button>
 
         <nav className="topbar-breadcrumbs" aria-label="Breadcrumb">
-          <span className="breadcrumb-root">Rajasthan</span>
-          <span className="breadcrumb-separator">/</span>
+          <span className="breadcrumb-root">
+            {selectedVillage?.state || 'Smart Village WebGIS'}
+          </span>
+          <span className="breadcrumb-separator" aria-hidden="true">/</span>
           <span className="breadcrumb-active">{currentTitle}</span>
         </nav>
       </div>
@@ -46,11 +49,20 @@ function Topbar({
         {/* Selected Village Quick Selector */}
         {villages.length > 0 && (
           <div className="topbar-village-selector-wrapper">
-            <label htmlFor="topbar-village-select" style={{ display: 'none' }}>
-              Select Active Village
-            </label>
             <div className="topbar-village-badge">
-              <MapPin size={13} />
+              <MapPin size={15} aria-hidden="true" />
+              <label
+                htmlFor="topbar-village-select"
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.03em',
+                  color: 'var(--color-text-secondary)',
+                }}
+              >
+                Active Village:
+              </label>
               <select
                 id="topbar-village-select"
                 value={selectedVillage?.id || ''}
@@ -62,18 +74,18 @@ function Topbar({
                 style={{
                   background: 'transparent',
                   border: 'none',
-                  color: 'inherit',
-                  fontWeight: 600,
-                  fontSize: '12px',
+                  color: 'var(--color-primary-dark)',
+                  fontWeight: 700,
+                  fontSize: '13.5px',
                   cursor: 'pointer',
                   outline: 'none',
                 }}
               >
-                <option value="" style={{ color: '#0f172a' }}>
+                <option value="" style={{ color: '#2C2A29' }}>
                   -- Select Monitored Village --
                 </option>
                 {villages.map((v) => (
-                  <option key={v.id} value={v.id} style={{ color: '#0f172a' }}>
+                  <option key={v.id} value={v.id} style={{ color: '#2C2A29' }}>
                     {v.name} ({v.district})
                   </option>
                 ))}
@@ -84,7 +96,11 @@ function Topbar({
 
         {/* Backend Status Pill */}
         <div className={`topbar-status-indicator ${isConnected ? 'online' : 'offline'}`}>
-          {isConnected ? <CheckCircle2 size={13} /> : <AlertTriangle size={13} />}
+          {isConnected ? (
+            <CheckCircle2 size={15} aria-hidden="true" />
+          ) : (
+            <AlertTriangle size={15} aria-hidden="true" />
+          )}
           <span>{isConnected ? 'PostgreSQL Connected' : 'Backend Disconnected'}</span>
         </div>
 
@@ -96,8 +112,8 @@ function Topbar({
           disabled={isLoading}
           title="Refresh live data from Django REST API"
         >
-          <RefreshCw size={13} className={isLoading ? 'spinning' : ''} />
-          <span>Sync</span>
+          <RefreshCw size={15} className={isLoading ? 'spinning' : ''} aria-hidden="true" />
+          <span>{isLoading ? 'Syncing...' : 'Sync Data'}</span>
         </button>
       </div>
     </header>
@@ -105,4 +121,3 @@ function Topbar({
 }
 
 export default Topbar;
-

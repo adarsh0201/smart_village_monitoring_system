@@ -1,0 +1,190 @@
+/* ==========================================================================
+   Smart Village Monitoring WebGIS — Bespoke Editorial Theme
+   Visual Language: Earth & Agriculture (Strictly Light Mode)
+   Target Users: Government Authorities, Administrators & District Officials
+   ========================================================================== */
+
+:root {
+  /* ── Canvas & Surface Palette (Dry Soil, Sandy Off-White, Crisp Paper) ── */
+  --color-bg: #F7F5F0;              /* Soft sandy off-white app canvas */
+  --color-bg-inset: #EFECE4;        /* Slightly deeper sand for subtle insets */
+  --color-surface: #FFFFFF;         /* Pure white cards & map frames */
+  --color-surface-muted: #FAF8F4;   /* Warm paper tint for headers & sub-boxes */
+  --color-surface-hover: #F2EFE7;   /* Tactile warm hover state */
+
+  /* ── Primary Agricultural Accents (Sage, Olive & Leaf Green) ── */
+  --color-primary: #4A7C59;         /* Primary sage-leaf green */
+  --color-primary-dark: #386145;    /* Deeper olive green for hover/focus */
+  --color-primary-light: #5F916D;   /* Mid agricultural green */
+  --color-primary-tint: #EEF3E8;    /* Soft sage paper wash for active tabs */
+  --color-secondary: #687A4F;       /* Warm olive secondary accent */
+  --color-accent: #4A7C59;
+
+  /* ── Clay & Khaki Borders / Dividers ── */
+  --color-border: #E2DAC6;          /* Light clay / khaki primary border */
+  --color-border-dark: #CBBFA7;     /* Defined khaki for form controls & emphasis */
+  --color-border-light: #EDE7D9;    /* Subtle hairline divider */
+
+  /* ── Typography (Espresso Brown & Earthy Slate — Never Pure Black) ── */
+  --color-text-primary: #2C2A29;    /* Deep rich espresso brown */
+  --color-text-secondary: #524D49;  /* High-legibility warm charcoal-brown */
+  --color-text-muted: #6E6760;      /* Accessible muted earth gray (WCAG AA on #FFF) */
+  --color-text-inverse: #FFFFFF;
+
+  /* ── Sidebar Navigation Tokens (Light Institutional Ledger) ── */
+  --color-sidebar-bg: #FFFFFF;
+  --color-sidebar-border: #E2DAC6;
+  --color-sidebar-hover: #F5F2EA;
+  --color-sidebar-active: #EEF3E8;
+  --color-sidebar-text: #2C2A29;
+  --color-sidebar-muted: #5E5852;
+
+  /* ── Semantic Status Tones (Muted Institutional Earth Palette) ── */
+  --color-success: #3B6949;
+  --color-success-bg: #EEF3E8;
+  --color-success-border: #C4D6BA;
+
+  --color-warning: #8F641B;
+  --color-warning-bg: #FAF3E3;
+  --color-warning-border: #E2CFA3;
+
+  --color-error: #9B3B2E;
+  --color-error-bg: #FAF0ED;
+  --color-error-border: #E3B6AE;
+
+  --color-info: #346078;
+  --color-info-bg: #EEF4F7;
+  --color-info-border: #BACEDB;
+
+  /* ── Token Aliases for Compatibility ── */
+  --primary: var(--color-primary);
+  --primary-dark: var(--color-primary-dark);
+  --primary-light: var(--color-primary-light);
+  --primary-subtle: rgba(74, 124, 89, 0.08);
+  --secondary: var(--color-secondary);
+  --surface-primary: var(--color-surface);
+  --surface-secondary: var(--color-bg);
+  --surface-tertiary: var(--color-surface-muted);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --text-tertiary: var(--color-text-muted);
+  --text-muted: var(--color-text-muted);
+  --border-light: var(--color-border-light);
+  --border-medium: var(--color-border);
+  --border-dark: var(--color-border-dark);
+  --success: var(--color-success);
+  --warning: var(--color-warning);
+  --danger: var(--color-error);
+  --info: var(--color-info);
+
+  /* ── Generous Whitespace & Report Spacing Scale ── */
+  --space-2xs: 4px;
+  --space-xs: 6px;
+  --space-sm: 10px;
+  --space-md: 18px;
+  --space-lg: 26px;
+  --space-xl: 36px;
+  --space-2xl: 52px;
+
+  /* ── Layout Proportions ── */
+  --sidebar-width: 276px;
+  --sidebar-width-collapsed: 108px;
+  --topbar-height: 70px;
+
+  /* ── Tactile Border Radii (Crisp Editorial Corners) ── */
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-full: 9999px;
+
+  /* ── Crisp, Subtle Paper Shadows (No Blurry/Muddy Slop) ── */
+  --shadow-xs: 0 1px 2px rgba(44, 42, 41, 0.05);
+  --shadow-sm: 0 1px 3px rgba(44, 42, 41, 0.06), 0 1px 1px rgba(44, 42, 41, 0.04);
+  --shadow-md: 0 3px 6px rgba(44, 42, 41, 0.07), 0 1px 2px rgba(44, 42, 41, 0.05);
+  --shadow-lg: 0 6px 14px rgba(44, 42, 41, 0.08), 0 2px 4px rgba(44, 42, 41, 0.04);
+  --shadow-xl: 0 12px 24px rgba(44, 42, 41, 0.10), 0 4px 6px rgba(44, 42, 41, 0.05);
+
+  /* ── Authoritative Sans-Serif Typography Scale (Accessibility-First) ── */
+  --font-sans: 'Inter', 'Public Sans', 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+  --font-family: var(--font-sans);
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --text-size-xs: 12.5px;
+  --text-size-sm: 14px;
+  --text-size-base: 15.5px;
+  --text-size-lg: 17px;
+  --text-size-xl: 21px;
+  --text-size-2xl: 26px;
+
+  /* ── Transitions ── */
+  --transition-fast: 140ms ease;
+  --transition-normal: 220ms ease;
+}
+
+/* --------------------------------------------------------------------------
+   Editorial Report Sections & Accessible Typography Helpers
+   -------------------------------------------------------------------------- */
+.report-section {
+  margin-bottom: var(--space-lg);
+}
+
+.report-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.report-section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.report-section-subtitle {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.report-kicker {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-primary);
+  margin-bottom: 4px;
+}
+
+.institutional-footer {
+  margin-top: auto;
+  padding: 18px 28px;
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-surface-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+/* Loading Spinner (Clean Solid Arc — No Glows) */
+.spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.85s linear infinite;
+}

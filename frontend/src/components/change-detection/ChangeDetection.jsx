@@ -166,8 +166,9 @@ export function ChangeDetection({
                 width: 44,
                 height: 44,
                 borderRadius: '50%',
-                background: '#e8f5e9',
-                color: 'var(--color-primary)',
+                background: 'var(--color-success-bg)',
+                border: '1px solid var(--color-success-border)',
+                color: 'var(--color-primary-dark)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -281,7 +282,7 @@ export function ChangeDetection({
             <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
               Water Body Difference (Δ NDWI):
             </span>
-            <code style={{ fontSize: '14px', fontWeight: 700, color: '#0284c7', fontFamily: 'var(--font-mono)' }}>
+            <code style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-info)', fontFamily: 'var(--font-mono)' }}>
               Δ NDWI = NDWI(T₂) - NDWI(T₁)
             </code>
             <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--color-text-secondary)' }}>

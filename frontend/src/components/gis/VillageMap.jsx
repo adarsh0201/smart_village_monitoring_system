@@ -408,18 +408,18 @@ function VillageMap({
                 right: isInspectorCollapsed ? '16px' : '360px',
                 bottom: 'auto',
                 maxWidth: '340px',
-                background: 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(8px)',
+                background: '#FFFFFF',
+                border: '1px solid var(--color-border)',
                 boxShadow: 'var(--shadow-md)',
                 zIndex: 800,
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span className="legend-title" style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#1b5e20', fontWeight: 700 }}>
-                  <Sparkles size={13} color="#2e7d32" />
-                  AI Land Cover ({activeVillage?.name})
+                <span className="legend-title" style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--color-primary-dark)', fontWeight: 700, marginBottom: 0 }}>
+                  <Sparkles size={13} style={{ color: 'var(--color-primary)' }} aria-hidden="true" />
+                  <span>AI Land Cover ({activeVillage?.name})</span>
                 </span>
-                <span className="badge badge-green" style={{ fontSize: '11px', padding: '2px 6px' }}>
+                <span className="badge badge-green" style={{ fontSize: '11.5px', padding: '2px 7px' }}>
                   {lulcData.total_area_hectares} ha
                 </span>
               </div>

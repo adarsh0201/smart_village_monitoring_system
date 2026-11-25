@@ -109,7 +109,7 @@ export function SatelliteLibrary({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     cursor: 'pointer',
-                    background: isExpanded ? 'rgba(23, 107, 58, 0.03)' : 'var(--color-surface)',
+                    background: isExpanded ? 'var(--color-success-bg)' : 'var(--color-surface)',
                     userSelect: 'none',
                     borderBottom: isExpanded ? '1px solid var(--color-border-light)' : 'none',
                   }}
@@ -120,7 +120,8 @@ export function SatelliteLibrary({
                         width: 40,
                         height: 40,
                         borderRadius: 'var(--radius-md)',
-                        background: isExpanded ? '#e8f5e9' : 'var(--color-surface-muted)',
+                        background: isExpanded ? 'var(--color-surface)' : 'var(--color-surface-muted)',
+                        border: '1px solid var(--color-border)',
                         color: isExpanded ? 'var(--color-primary)' : 'var(--color-text-secondary)',
                         display: 'flex',
                         alignItems: 'center',
@@ -173,16 +174,13 @@ export function SatelliteLibrary({
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-                      {isExpanded ? 'Hide Bands' : 'Inspect Spectral Bands'}
-                    </span>
                     <button
                       type="button"
                       className="btn btn-secondary btn-sm"
-                      style={{ padding: '6px 8px', borderRadius: '50%' }}
                       aria-label="Toggle band view"
                     >
-                      {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                      {isExpanded ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
+                      <span>{isExpanded ? 'Hide Bands' : 'Inspect Bands'}</span>
                     </button>
                   </div>
                 </div>

@@ -61,7 +61,8 @@ function SpatialInspector({
             onClick={onToggleCollapse}
             title="Minimize inspector panel"
           >
-            <ChevronRight size={14} />
+            <ChevronRight size={14} aria-hidden="true" />
+            <span>Hide</span>
           </button>
         </div>
       </div>
@@ -128,12 +129,12 @@ function SpatialInspector({
 
           {/* AI LULC Classification Card (Phase 8 Multi-Modal) */}
           {lulcData && lulcData.breakdown && lulcData.breakdown.length > 0 && (
-            <div style={{ marginTop: '12px', padding: '10px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <div style={{ marginTop: '12px', padding: '12px 14px', background: 'var(--color-surface-muted)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#1b5e20' }}>
+                <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
                   AI LULC Breakdown (10m)
                 </span>
-                <span className="badge badge-green" style={{ fontSize: '10px' }}>83% Acc</span>
+                <span className="badge badge-green" style={{ fontSize: '11px' }}>83% Acc</span>
               </div>
               <div style={{ display: 'flex', height: '8px', borderRadius: '4px', overflow: 'hidden', marginBottom: '8px' }}>
                 {lulcData.breakdown.map((item) => (

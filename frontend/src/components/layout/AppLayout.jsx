@@ -19,13 +19,18 @@ function AppLayout({
 
   return (
     <div className="app-shell">
-      {/* Mobile Drawer Backdrop */}
+      <a href="#main-workspace" className="skip-link">
+        Skip to main dashboard content
+      </a>
+
+      {/* Mobile Drawer Backdrop (Solid warm scrim, no glassmorphism) */}
       <div
         className={`sidebar-overlay ${isMobileOpen ? 'active' : ''}`}
         onClick={() => setIsMobileOpen(false)}
+        aria-hidden="true"
       />
 
-      {/* Sidebar Navigation */}
+      {/* Institutional Navigation Sidebar */}
       <Sidebar
         activePage={activePage}
         onNavigate={onNavigate}
@@ -38,7 +43,7 @@ function AppLayout({
         sceneCount={scenes.length}
       />
 
-      {/* Main Workspace Area */}
+      {/* Main Content Area */}
       <div className={`main-wrapper ${isCollapsed ? 'sidebar-collapsed' : ''}`}>
         <Topbar
           activePage={activePage}
@@ -51,11 +56,22 @@ function AppLayout({
           onSelectVillage={onSelectVillage}
         />
 
-        <main className="page-workspace">{children}</main>
+        <main id="main-workspace" className="page-workspace" tabIndex={-1}>
+          {children}
+        </main>
+
+        <footer className="institutional-footer" aria-label="System Governance Footer">
+          <div>
+            <strong>Smart Village Monitoring System</strong> &bull; WebGIS Decision Support Portal
+          </div>
+          <div>
+            Spatial Reference: <code className="cell-code">EPSG:4326 (WGS 84)</code> &bull;{' '}
+            {villages.length} Registered Administrative Units
+          </div>
+        </footer>
       </div>
     </div>
   );
 }
 
 export default AppLayout;
-
