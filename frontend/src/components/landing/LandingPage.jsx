@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Landmark,
   LayoutDashboard,
@@ -13,19 +13,18 @@ import {
   Leaf,
   CloudRain,
   Grid,
-  Trees,
+  Wheat,
   Waves,
   Home,
-  Wheat,
   CheckCircle2,
-  MapPin,
   Workflow,
+  Radar,
   Calendar,
 } from 'lucide-react';
 
 /**
  * Gram Darpan — Official Spatial Intelligence Portal for Rural Governance
- * Aesthetic: Printed Atlas meets Interactive GIS Tool (Strictly Light Mode)
+ * Aesthetic: High-end Printed Atlas meets Interactive GIS Tool (Strictly Light Mode)
  */
 export function LandingPage({
   onOpenDashboard = () => {},
@@ -34,14 +33,119 @@ export function LandingPage({
   sceneCount = 0,
   isConnected = true,
 }) {
+  const [activeLayerPreview, setActiveLayerPreview] = useState('optical');
+
+  const layerSnapshots = {
+    optical: {
+      label: 'Optical Vegetation',
+      sensor: 'Sentinel-2 Level-2A (10m)',
+      cards: [
+        {
+          title: 'Vegetation Health',
+          value: 'NDVI: 0.61',
+          detail: 'Healthy irrigated canopy',
+          icon: Leaf,
+          accent: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+        },
+        {
+          title: 'Precipitation (30 Days)',
+          value: 'Rainfall: 42mm',
+          detail: 'Post-monsoon moisture balance',
+          icon: CloudRain,
+          accent: 'text-[#346078] bg-[#EEF4F7] border-[#BACEDB]',
+        },
+        {
+          title: 'AI Classification',
+          value: 'Cropland',
+          detail: '6-Feature Random Forest inference',
+          icon: Wheat,
+          accent: 'text-[#8F641B] bg-[#FAF3E3] border-[#E2CFA3]',
+        },
+      ],
+      distribution: [
+        { name: 'Cropland', pct: 62, color: 'bg-[#4A7C59]' },
+        { name: 'Tree Canopy', pct: 18, color: 'bg-[#2E5238]' },
+        { name: 'Settlements', pct: 12, color: 'bg-[#B35C44]' },
+        { name: 'Water Bodies', pct: 8, color: 'bg-[#3D6E8A]' },
+      ],
+    },
+    radar: {
+      label: 'SAR Backscatter',
+      sensor: 'Sentinel-1 IW GRDH (All-Weather)',
+      cards: [
+        {
+          title: 'Vertical Transmit / Receive',
+          value: 'VV: -9.4 dB',
+          detail: 'Surface roughness & moisture response',
+          icon: Radar,
+          accent: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+        },
+        {
+          title: 'Cross-Polarization',
+          value: 'VH: -16.2 dB',
+          detail: 'Volume scattering in dense crops',
+          icon: Layers,
+          accent: 'text-[#346078] bg-[#EEF4F7] border-[#BACEDB]',
+        },
+        {
+          title: 'Cloud Interference',
+          value: '0% Obscured',
+          detail: 'C-band radar penetrates cloud cover',
+          icon: CheckCircle2,
+          accent: 'text-[#8F641B] bg-[#FAF3E3] border-[#E2CFA3]',
+        },
+      ],
+      distribution: [
+        { name: 'Vegetated Cover', pct: 58, color: 'bg-[#4A7C59]' },
+        { name: 'Woody Structure', pct: 20, color: 'bg-[#2E5238]' },
+        { name: 'Built Reflectors', pct: 14, color: 'bg-[#B35C44]' },
+        { name: 'Smooth Water', pct: 8, color: 'bg-[#3D6E8A]' },
+      ],
+    },
+    hydrology: {
+      label: 'Hydrology & Terrain',
+      sensor: 'NDWI + Copernicus DEM (GLO-30)',
+      cards: [
+        {
+          title: 'Surface Water Index',
+          value: 'NDWI: +0.34',
+          detail: 'Village talab & canal delineation',
+          icon: Waves,
+          accent: 'text-[#346078] bg-[#EEF4F7] border-[#BACEDB]',
+        },
+        {
+          title: 'Mean Terrain Slope',
+          value: 'Slope: 1.8°',
+          detail: 'Alluvial basin flood susceptibility',
+          icon: Compass,
+          accent: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+        },
+        {
+          title: 'Settlement Audit',
+          value: 'Built-Up: 12%',
+          detail: 'Parcel expansion monitoring',
+          icon: Home,
+          accent: 'text-[#8F641B] bg-[#FAF3E3] border-[#E2CFA3]',
+        },
+      ],
+      distribution: [
+        { name: 'Agricultural Basin', pct: 64, color: 'bg-[#4A7C59]' },
+        { name: 'Riparian Canopy', pct: 15, color: 'bg-[#2E5238]' },
+        { name: 'Settlements', pct: 12, color: 'bg-[#B35C44]' },
+        { name: 'Surface Reservoirs', pct: 9, color: 'bg-[#3D6E8A]' },
+      ],
+    },
+  };
+
+  const currentSnapshot = layerSnapshots[activeLayerPreview] || layerSnapshots.optical;
+
   const processSteps = [
     {
       stepNumber: 'Step 01',
       title: 'Select & Acquire',
       description:
         'Choose a village jurisdiction. The system automatically fetches 10m-resolution Sentinel-1 (Radar) and Sentinel-2 (Optical) data.',
-      badgeText: '10m Multi-Sensor Sync',
-      highlights: ['Sentinel-1 SAR', 'Sentinel-2 L2A', 'Copernicus DEM'],
+      highlights: ['Village Boundary AOI', 'Sentinel-1 SAR', 'Sentinel-2 L2A'],
       icon: Satellite,
     },
     {
@@ -49,8 +153,7 @@ export function LandingPage({
       title: 'AI Processing',
       description:
         'Navigate to the Analytics Engine where our Random Forest model classifies pixels into Cropland, Trees, Water, and Settlements.',
-      badgeText: '6-Feature Fusion',
-      highlights: ['SCL Cloud Masking', 'NDVI & NDWI Stack', 'Automated Inference'],
+      highlights: ['SCL Cloud Masking', '6-Feature Matrix', '100 m² Cell Grid'],
       icon: Cpu,
     },
     {
@@ -58,8 +161,7 @@ export function LandingPage({
       title: 'Real-World Evaluation',
       description:
         'Officials use these insights to assess flood inundation, track unauthorized urbanization, and evaluate seasonal crop health.',
-      badgeText: 'Administrative Action',
-      highlights: ['Flood Assessment', 'Urban Encroachment', 'Crop Health'],
+      highlights: ['Flood Inundation', 'Urbanization Audit', 'Crop Health'],
       icon: ClipboardCheck,
     },
   ];
@@ -71,15 +173,10 @@ export function LandingPage({
       code: 'Module 01',
       title: 'AI Land Cover (LULC)',
       description:
-        'Hectare analytics, spatial statistics, and terrain breakdowns across verified village boundaries.',
+        'Hectare analytics, spatial statistics, and terrain breakdowns across registered village jurisdictions.',
       actionLabel: 'Open LULC Analytics',
       icon: Layers,
-      previewTags: [
-        { label: 'Cropland', color: 'bg-[#4A7C59]' },
-        { label: 'Trees', color: 'bg-[#2E5238]' },
-        { label: 'Built-Up', color: 'bg-[#B35C44]' },
-        { label: 'Water', color: 'bg-[#3D6E8A]' },
-      ],
+      specs: ['Cropland & Canopy Area', 'Built-Up Expansion', '10m Hectare Ledger'],
     },
     {
       id: 'gis',
@@ -88,13 +185,9 @@ export function LandingPage({
       title: 'GIS Spatial Explorer',
       description:
         'Interactive metric grid viewer with transparent spectral index overlays (NDWI, SAVI, MNDWI).',
-      actionLabel: 'Launch Spatial Explorer',
+      actionLabel: 'Open Spatial Explorer',
       icon: Map,
-      previewTags: [
-        { label: 'NDWI Layer', color: 'bg-[#3D6E8A]' },
-        { label: 'SAVI Arid', color: 'bg-[#C4A661]' },
-        { label: 'MNDWI Mask', color: 'bg-[#5B8A68]' },
-      ],
+      specs: ['PostGIS Boundaries', 'NDWI · SAVI · MNDWI', 'Multi-Basemap Viewer'],
     },
     {
       id: 'change',
@@ -103,13 +196,9 @@ export function LandingPage({
       title: 'Temporal Change Engine',
       description:
         'Dual-date inference to map environmental transitions over time across seasonal and annual epochs.',
-      actionLabel: 'Inspect Temporal Change',
+      actionLabel: 'Open Temporal Change',
       icon: GitCompare,
-      previewTags: [
-        { label: 'Epoch T₁ Baseline', color: 'bg-stone-500' },
-        { label: 'Epoch T₂ Target', color: 'bg-emerald-700' },
-        { label: 'Δ Surface Audit', color: 'bg-[#A67C2E]' },
-      ],
+      specs: ['T₁ vs T₂ Comparison', 'Δ NDVI Vegetation Shift', 'Δ NDWI Water Shift'],
     },
   ];
 
@@ -118,7 +207,6 @@ export function LandingPage({
       {/* ── 1. Top Navigation Header ── */}
       <header className="sticky top-0 z-40 bg-white border-b border-[#E2DAC6] shadow-[0_1px_2px_rgba(44,42,41,0.05)]">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 py-4 flex flex-wrap items-center justify-between gap-4">
-          {/* Gram Darpan Logo & Title */}
           <a
             href="#overview"
             className="flex items-center gap-3.5 text-[#2C2A29] no-underline rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-700"
@@ -131,12 +219,11 @@ export function LandingPage({
                 Gram Darpan
               </span>
               <span className="text-xs font-semibold uppercase tracking-wider text-stone-600">
-                WebGIS Satellite Governance Portal
+                Rural Spatial Intelligence Portal
               </span>
             </div>
           </a>
 
-          {/* Anchor Links + Prominent Solid Green Open Dashboard Button */}
           <nav
             aria-label="Primary Header Navigation"
             className="flex flex-wrap items-center gap-2 sm:gap-6"
@@ -178,23 +265,18 @@ export function LandingPage({
       </header>
 
       <main className="flex-1">
-        {/* ── 2. Hero Section (Objective & Agricultural Parcel Atlas Visual) ── */}
+        {/* ── 2. Hero Section (Objective & Interactive Observation Dossier) ── */}
         <section
           id="overview"
-          className="relative overflow-hidden border-b border-[#E2DAC6] bg-[#F7F5F0] py-16 lg:py-22"
-          style={{
-            backgroundImage:
-              'linear-gradient(to right, rgba(226, 218, 198, 0.45) 1px, transparent 1px), linear-gradient(to bottom, rgba(226, 218, 198, 0.45) 1px, transparent 1px)',
-            backgroundSize: '44px 44px',
-          }}
+          className="border-b border-[#E2DAC6] bg-[#F7F5F0] py-16 lg:py-22"
         >
           <div className="max-w-7xl mx-auto px-6 lg:px-10">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
-              {/* Left Column: Authoritative Editorial Copy */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+              {/* Left Column: Authoritative Serif Objective & Actions */}
               <div className="lg:col-span-6 space-y-6">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white border border-[#E2DAC6] rounded-md text-sm font-semibold text-emerald-800 shadow-[0_1px_2px_rgba(44,42,41,0.05)]">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white border border-[#E2DAC6] rounded-md text-sm font-semibold text-emerald-800 shadow-[0_1px_2px_rgba(44,42,41,0.04)]">
                   <CheckCircle2 className="w-4 h-4 text-emerald-700" aria-hidden="true" />
-                  <span>Official Rural Spatial Observatory</span>
+                  <span>Decision Support Portal &middot; Sentinel &amp; Random Forest AI</span>
                 </div>
 
                 <h1 className="font-serif text-4xl sm:text-5xl font-bold tracking-tight text-[#2C2A29] leading-[1.12]">
@@ -202,14 +284,14 @@ export function LandingPage({
                 </h1>
 
                 <p className="text-lg text-stone-700 leading-relaxed max-w-xl">
-                  Gram Darpan merges multi-modal Sentinel-1 radar and Sentinel-2 optical satellite imagery with automated Random Forest AI to monitor land use, watershed reserves, and seasonal environmental changes across every village jurisdiction.
+                  Gram Darpan merges multi-modal Sentinel-1 radar and Sentinel-2 optical satellite imagery with automated Random Forest AI to deliver verified 10-meter land use classification, hydrological indicators, and environmental change assessments.
                 </p>
 
                 <div className="flex flex-wrap items-center gap-4 pt-2">
                   <button
                     type="button"
                     onClick={onOpenDashboard}
-                    className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-md bg-emerald-700 hover:bg-emerald-800 text-white text-base font-semibold border border-emerald-800 shadow-[0_2px_4px_rgba(44,42,41,0.14)] transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-md bg-emerald-700 hover:bg-emerald-800 text-white text-base font-semibold border border-emerald-800 shadow-[0_2px_4px_rgba(44,42,41,0.12)] transition-colors cursor-pointer"
                   >
                     <LayoutDashboard className="w-5 h-5" aria-hidden="true" />
                     <span>Open Dashboard</span>
@@ -221,201 +303,145 @@ export function LandingPage({
                     className="inline-flex items-center gap-2 px-6 py-3.5 rounded-md bg-white hover:bg-stone-100 text-[#2C2A29] text-base font-semibold border border-[#E2DAC6] shadow-[0_1px_2px_rgba(44,42,41,0.05)] transition-colors"
                   >
                     <Workflow className="w-5 h-5 text-emerald-700" aria-hidden="true" />
-                    <span>See How It Works</span>
+                    <span>Explore Workflow</span>
                   </a>
                 </div>
 
-                {/* Grounded Atlas Telemetry Strip */}
+                {/* Printed-Atlas System Ledger Strip */}
                 <div className="pt-4 grid grid-cols-3 gap-4 max-w-lg">
-                  <div className="bg-white border border-[#E2DAC6] rounded-md px-4 py-3 shadow-[0_1px_2px_rgba(44,42,41,0.04)]">
+                  <div className="bg-white border border-[#E2DAC6] rounded-md px-4 py-3.5 shadow-[0_1px_2px_rgba(44,42,41,0.04)]">
                     <span className="text-xs font-semibold uppercase tracking-wide text-stone-600 block">
-                      Resolution
+                      Grid Scale
                     </span>
                     <span className="text-lg font-bold font-mono text-[#2C2A29]">10m &times; 10m</span>
                   </div>
-                  <div className="bg-white border border-[#E2DAC6] rounded-md px-4 py-3 shadow-[0_1px_2px_rgba(44,42,41,0.04)]">
+                  <div className="bg-white border border-[#E2DAC6] rounded-md px-4 py-3.5 shadow-[0_1px_2px_rgba(44,42,41,0.04)]">
                     <span className="text-xs font-semibold uppercase tracking-wide text-stone-600 block">
-                      Villages
+                      Jurisdictions
                     </span>
                     <span className="text-lg font-bold font-mono text-[#2C2A29]">
-                      {villageCount > 0 ? villageCount : 'PostGIS'}
+                      {villageCount > 0 ? `${villageCount} Units` : 'PostGIS'}
                     </span>
                   </div>
-                  <div className="bg-white border border-[#E2DAC6] rounded-md px-4 py-3 shadow-[0_1px_2px_rgba(44,42,41,0.04)]">
+                  <div className="bg-white border border-[#E2DAC6] rounded-md px-4 py-3.5 shadow-[0_1px_2px_rgba(44,42,41,0.04)]">
                     <span className="text-xs font-semibold uppercase tracking-wide text-stone-600 block">
-                      Acquisitions
+                      Observations
                     </span>
                     <span className="text-lg font-bold font-mono text-emerald-800">
-                      {sceneCount > 0 ? `${sceneCount} Scenes` : isConnected ? 'Live API' : 'Ready'}
+                      {sceneCount > 0 ? `${sceneCount} Scenes` : isConnected ? 'Active' : 'Ready'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Right Column: Agricultural Map Visual Cluster & Floating Metric Cards */}
-              <div className="lg:col-span-6 relative px-2 sm:px-6 py-6">
-                {/* Outer Survey Concentric Rings Frame (Atlas Motif) */}
-                <div className="relative mx-auto max-w-lg bg-white border border-[#E2DAC6] rounded-xl p-5 sm:p-6 shadow-[0_4px_14px_rgba(44,42,41,0.08)]">
-                  {/* Top Atlas Plate Header */}
-                  <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-[#EDE7D9]">
-                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-stone-600">
-                      <MapPin className="w-4 h-4 text-emerald-700" aria-hidden="true" />
-                      <span>Cadastral Plate · Sample AOI</span>
+              {/* Right Column: Interactive Data Cards & Observation Ledger (Clean UI, Zero Graphics) */}
+              <div className="lg:col-span-6">
+                <div className="bg-white border border-[#E2DAC6] rounded-lg p-6 sm:p-7 shadow-[0_3px_10px_rgba(44,42,41,0.07)] space-y-6">
+                  {/* Card Header & Interactive Sensor Switcher */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#E2DAC6]">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 block">
+                        Sample Village Observation Ledger
+                      </span>
+                      <h2 className="text-lg font-bold text-[#2C2A29] mt-0.5">
+                        {currentSnapshot.sensor}
+                      </h2>
                     </div>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#F7F5F0] border border-[#E2DAC6] rounded-sm text-xs font-mono font-semibold text-[#2C2A29]">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-[#FAF8F4] border border-[#E2DAC6] text-xs font-mono font-semibold text-[#2C2A29]">
                       <Compass className="w-3.5 h-3.5 text-emerald-700" aria-hidden="true" />
-                      <span>26.91°N 75.79°E</span>
+                      <span>EPSG:4326</span>
                     </span>
                   </div>
 
-                  {/* Agricultural Land Plots Collage */}
-                  <div className="relative bg-[#F7F5F0] border border-[#E2DAC6] rounded-lg p-4">
-                    {/* Cadastral Boundary Shape Container */}
-                    <div className="relative grid grid-cols-12 grid-rows-6 gap-2 h-80 sm:h-96 p-2 bg-[#FAF8F4] border-2 border-[#36533E] rounded-[28px] overflow-hidden">
-                      {/* Plot 1: Deep Irrigated Cropland */}
-                      <div className="col-span-5 row-span-3 bg-[#3E6B48] border border-[#FAF8F4] rounded-tl-[20px] p-2.5 flex items-end">
-                        <span className="text-[11px] font-mono font-semibold text-white/90">
-                          PLOT A-01
-                        </span>
-                      </div>
-
-                      {/* Plot 2: Young Rabi Crop (Olive Sage) */}
-                      <div className="col-span-4 row-span-2 bg-[#719358] border border-[#FAF8F4] p-2">
-                        <span className="text-[11px] font-mono font-semibold text-white/90">
-                          PLOT A-02
-                        </span>
-                      </div>
-
-                      {/* Plot 3: Sandy Fallow Soil */}
-                      <div className="col-span-3 row-span-2 bg-[#C8AC70] border border-[#FAF8F4] rounded-tr-[20px] p-2">
-                        <span className="text-[11px] font-mono font-semibold text-[#2C2A29]">
-                          B-04
-                        </span>
-                      </div>
-
-                      {/* Plot 4: Pivot Cropland Highlight */}
-                      <div className="col-span-4 row-span-2 bg-[#D3BA7A] border border-[#FAF8F4] flex items-center justify-center relative">
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#688D4E] border-2 border-[#FAF8F4] flex items-center justify-center">
-                          <span className="text-[10px] font-mono font-bold text-white">PIVOT</span>
-                        </div>
-                      </div>
-
-                      {/* Plot 5: Dense Agro-Forestry / Trees */}
-                      <div className="col-span-3 row-span-2 bg-[#56814F] border border-[#FAF8F4] p-2">
-                        <span className="text-[11px] font-mono font-semibold text-white/90">
-                          B-07
-                        </span>
-                      </div>
-
-                      {/* Plot 6: Harvested Earth Parcel with Orchard Circle */}
-                      <div className="col-span-5 row-span-3 bg-[#7D6648] border border-[#FAF8F4] rounded-bl-[20px] flex items-center justify-center relative">
-                        <div className="w-16 h-16 rounded-full bg-[#44714A] border-2 border-[#FAF8F4] flex items-center justify-center">
-                          <Trees className="w-5 h-5 text-white" aria-hidden="true" />
-                        </div>
-                      </div>
-
-                      {/* Plot 7: Dense Cropland Southern Sector */}
-                      <div className="col-span-4 row-span-2 bg-[#3F6D4A] border border-[#FAF8F4] p-2.5 flex items-end">
-                        <span className="text-[11px] font-mono font-semibold text-white/90">
-                          PLOT C-11
-                        </span>
-                      </div>
-
-                      {/* Plot 8: Check Dam / Moisture Reserve */}
-                      <div className="col-span-3 row-span-2 bg-[#93AD8B] border border-[#FAF8F4] rounded-br-[20px] p-2 flex items-end justify-end">
-                        <span className="text-[11px] font-mono font-semibold text-[#2C2A29]">
-                          C-14
-                        </span>
-                      </div>
-
-                      {/* Crisp Rural Stream / Irrigation Canal Overlay */}
-                      <svg
-                        viewBox="0 0 400 120"
-                        className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 w-full h-24 opacity-85"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M -10 72 C 75 52, 130 92, 215 62 C 285 38, 340 54, 410 42"
-                          fill="none"
-                          stroke="#ECE8DC"
-                          strokeWidth="7"
-                          strokeLinecap="round"
-                        />
-                        <path
-                          d="M -10 72 C 75 52, 130 92, 215 62 C 285 38, 340 54, 410 42"
-                          fill="none"
-                          stroke="#5B859B"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          strokeDasharray="6 4"
-                        />
-                      </svg>
-                    </div>
-
-                    {/* Floating Data Card 1: Top-Left (NDVI: 0.61) */}
-                    <div className="sm:absolute sm:-top-5 sm:-left-5 mt-3 sm:mt-0 bg-white border border-[#E2DAC6] rounded-lg px-4 py-3 shadow-[0_4px_10px_rgba(44,42,41,0.10)] flex items-center gap-3 z-20">
-                      <span className="w-9 h-9 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 shrink-0">
-                        <Leaf className="w-4 h-4" aria-hidden="true" />
-                      </span>
-                      <div>
-                        <span className="text-xs font-semibold text-stone-600 block leading-tight">
-                          Vegetation Health
-                        </span>
-                        <span className="text-base font-bold font-mono text-[#2C2A29]">
-                          NDVI: 0.61
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Floating Data Card 2: Middle-Right (Rainfall: 42mm) */}
-                    <div className="sm:absolute sm:top-1/2 sm:-translate-y-1/2 sm:-right-6 mt-2.5 sm:mt-0 bg-white border border-[#E2DAC6] rounded-lg px-4 py-3 shadow-[0_4px_10px_rgba(44,42,41,0.10)] flex items-center gap-3 z-20">
-                      <span className="w-9 h-9 rounded-md bg-[#EEF4F7] border border-[#BACEDB] flex items-center justify-center text-[#346078] shrink-0">
-                        <CloudRain className="w-4 h-4" aria-hidden="true" />
-                      </span>
-                      <div>
-                        <span className="text-xs font-semibold text-stone-600 block leading-tight">
-                          30-Day Precipitation
-                        </span>
-                        <span className="text-base font-bold font-mono text-[#2C2A29]">
-                          Rainfall: 42mm
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Floating Data Card 3: Bottom-Left (AI Classification: Cropland) */}
-                    <div className="sm:absolute sm:-bottom-5 sm:left-4 mt-2.5 sm:mt-0 bg-white border border-[#E2DAC6] rounded-lg px-4 py-3 shadow-[0_4px_10px_rgba(44,42,41,0.10)] flex items-center gap-3 z-20">
-                      <span className="w-9 h-9 rounded-md bg-[#FAF3E3] border border-[#E2CFA3] flex items-center justify-center text-[#8F641B] shrink-0">
-                        <Wheat className="w-4 h-4" aria-hidden="true" />
-                      </span>
-                      <div>
-                        <span className="text-xs font-semibold text-stone-600 block leading-tight">
-                          Random Forest Model
-                        </span>
-                        <span className="text-sm sm:text-base font-bold text-[#2C2A29]">
-                          AI Classification: <span className="text-emerald-700">Cropland</span>
-                        </span>
-                      </div>
-                    </div>
+                  {/* Interactive Band Switcher Tabs */}
+                  <div
+                    role="tablist"
+                    aria-label="Preview Satellite Observation Modes"
+                    className="grid grid-cols-3 gap-2 p-1 bg-[#F7F5F0] border border-[#E2DAC6] rounded-md"
+                  >
+                    {Object.entries(layerSnapshots).map(([key, item]) => {
+                      const isActive = activeLayerPreview === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          onClick={() => setActiveLayerPreview(key)}
+                          className={`px-3 py-2 rounded-sm text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
+                            isActive
+                              ? 'bg-emerald-700 text-white shadow-[0_1px_2px_rgba(44,42,41,0.12)]'
+                              : 'text-[#2C2A29] hover:bg-white'
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      );
+                    })}
                   </div>
 
-                  {/* Plate Cartographic Symbology Key */}
-                  <div className="mt-8 pt-3.5 border-t border-[#EDE7D9] flex flex-wrap items-center justify-between gap-3 text-xs font-semibold text-stone-600">
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="w-3 h-3 rounded-xs bg-[#3E6B48] border border-[#2C2A29]/20" />
-                      <span>Cropland</span>
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="w-3 h-3 rounded-xs bg-[#56814F] border border-[#2C2A29]/20" />
-                      <span>Tree Cover</span>
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="w-3 h-3 rounded-xs bg-[#C8AC70] border border-[#2C2A29]/20" />
-                      <span>Sandy Fallow</span>
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="w-3 h-3 rounded-xs bg-[#5B859B] border border-[#2C2A29]/20" />
-                      <span>Surface Water</span>
-                    </span>
+                  {/* Structured Data Metric Cards (NDVI, Rainfall, Classification) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    {currentSnapshot.cards.map((card) => {
+                      const CardIcon = card.icon;
+                      return (
+                        <div
+                          key={card.title}
+                          className="bg-[#FAF8F4] border border-[#E2DAC6] rounded-md p-4 flex flex-col justify-between gap-2.5"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`w-8 h-8 rounded-sm border flex items-center justify-center shrink-0 ${card.accent}`}
+                            >
+                              <CardIcon className="w-4 h-4" aria-hidden="true" />
+                            </span>
+                            <span className="text-xs font-semibold text-stone-600 leading-tight">
+                              {card.title}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="text-base font-bold font-mono text-[#2C2A29]">
+                              {card.value}
+                            </div>
+                            <div className="text-xs text-stone-600 mt-1">{card.detail}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Terrain Composition Reference Bar */}
+                  <div className="pt-2 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs font-semibold text-stone-600">
+                      <span className="uppercase tracking-wide">
+                        Terrain Class Share (Indicative Village Audit)
+                      </span>
+                      <span className="font-mono text-[#2C2A29]">100% Parcel Grid</span>
+                    </div>
+
+                    <div className="h-3.5 w-full rounded-sm overflow-hidden flex border border-[#E2DAC6]">
+                      {currentSnapshot.distribution.map((seg) => (
+                        <div
+                          key={seg.name}
+                          style={{ width: `${seg.pct}%` }}
+                          className={seg.color}
+                          title={`${seg.name}: ${seg.pct}%`}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                      {currentSnapshot.distribution.map((seg) => (
+                        <div key={seg.name} className="flex items-center gap-1.5 text-xs">
+                          <span
+                            className={`w-2.5 h-2.5 rounded-xs shrink-0 ${seg.color}`}
+                            aria-hidden="true"
+                          />
+                          <span className="font-medium text-stone-700 truncate">{seg.name}</span>
+                          <span className="font-mono font-bold text-[#2C2A29]">{seg.pct}%</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -434,34 +460,32 @@ export function LandingPage({
               <div>
                 <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700 mb-1.5">
                   <Workflow className="w-4 h-4" aria-hidden="true" />
-                  <span>Operational Process</span>
+                  <span>How It Works</span>
                 </span>
                 <h2
                   id="process-heading"
                   className="font-serif text-3xl sm:text-4xl font-bold text-[#2C2A29]"
                 >
-                  From Satellite Pass to Village Decision
+                  Operational Process &amp; Governance Impact
                 </h2>
               </div>
               <p className="text-base text-stone-600 max-w-xl">
-                A deterministic three-stage remote sensing pipeline built for rapid administrative evaluation at the panchayat and district level.
+                Three structured steps take officials from multi-sensor satellite acquisition to verified village field assessments.
               </p>
             </div>
 
-            {/* Horizontal 3-Step Flow */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 relative">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
               {processSteps.map((step, index) => {
                 const StepIcon = step.icon;
                 return (
                   <article
                     key={step.stepNumber}
-                    className="relative bg-[#F7F5F0] border border-[#E2DAC6] rounded-lg p-7 flex flex-col justify-between gap-6 shadow-[0_1px_2px_rgba(44,42,41,0.04)]"
+                    className="bg-[#F7F5F0] border border-[#E2DAC6] rounded-lg p-7 flex flex-col justify-between gap-6 shadow-[0_1px_2px_rgba(44,42,41,0.04)]"
                   >
                     <div className="space-y-4">
-                      {/* Step Header Row */}
-                      <div className="flex items-center justify-between gap-3 pb-3.5 border-b border-[#E2DAC6]">
+                      <div className="flex items-center justify-between gap-3 pb-4 border-b border-[#E2DAC6]">
                         <div className="flex items-center gap-3">
-                          <span className="w-10 h-10 rounded-md bg-white border border-[#E2DAC6] flex items-center justify-center text-emerald-700 shrink-0 shadow-[0_1px_2px_rgba(44,42,41,0.04)]">
+                          <span className="w-10 h-10 rounded-md bg-white border border-[#E2DAC6] flex items-center justify-center text-emerald-700 shrink-0">
                             <StepIcon className="w-5 h-5" aria-hidden="true" />
                           </span>
                           <div>
@@ -475,7 +499,7 @@ export function LandingPage({
                         </div>
 
                         {index < processSteps.length - 1 && (
-                          <span className="hidden lg:inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-white border border-[#E2DAC6] px-2 py-1 rounded-sm">
+                          <span className="hidden lg:inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-white border border-[#E2DAC6] px-2.5 py-1 rounded-sm">
                             <span>Next</span>
                             <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
                           </span>
@@ -487,14 +511,13 @@ export function LandingPage({
                       </p>
                     </div>
 
-                    {/* Stage Spec Badges */}
-                    <div className="pt-4 border-t border-[#E2DAC6] flex flex-wrap items-center gap-2">
+                    <div className="pt-4 border-t border-[#E2DAC6] flex flex-wrap gap-2">
                       {step.highlights.map((tag) => (
                         <span
                           key={tag}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#E2DAC6] rounded-sm text-xs font-semibold text-[#2C2A29]"
                         >
-                          <CheckCircle2 className="w-3 h-3 text-emerald-700" aria-hidden="true" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" aria-hidden="true" />
                           <span>{tag}</span>
                         </span>
                       ))}
@@ -517,17 +540,17 @@ export function LandingPage({
               <div>
                 <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700 mb-1.5">
                   <Grid className="w-4 h-4" aria-hidden="true" />
-                  <span>Core Capabilities</span>
+                  <span>Core Features</span>
                 </span>
                 <h2
                   id="modules-heading"
                   className="font-serif text-3xl sm:text-4xl font-bold text-[#2C2A29]"
                 >
-                  Integrated Analytical Modules
+                  Analytical Portal Modules
                 </h2>
               </div>
               <p className="text-base text-stone-600 max-w-xl">
-                Launch any specialized module below to inspect calibrated land-cover rasters, spectral indices, or multi-date transitions.
+                Select any workspace module below to inspect calibrated land-cover reports, spectral map layers, or temporal change detection.
               </p>
             </div>
 
@@ -542,7 +565,6 @@ export function LandingPage({
                     className="group text-left bg-white border border-[#E2DAC6] hover:border-emerald-700 rounded-lg p-7 shadow-[0_1px_3px_rgba(44,42,41,0.06)] hover:shadow-[0_4px_12px_rgba(44,42,41,0.09)] transition-all flex flex-col justify-between gap-6 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-700"
                   >
                     <div className="space-y-4">
-                      {/* Card Header */}
                       <div className="flex items-center justify-between gap-3 pb-3.5 border-b border-[#EDE7D9]">
                         <div className="inline-flex items-center gap-2.5 text-emerald-800 font-bold text-sm">
                           <span className="w-10 h-10 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 shrink-0">
@@ -551,11 +573,10 @@ export function LandingPage({
                           <span>{mod.code}</span>
                         </div>
                         <span className="text-xs font-semibold uppercase tracking-wide text-stone-600">
-                          Interactive
+                          Workspace
                         </span>
                       </div>
 
-                      {/* Title & Description */}
                       <div>
                         <h3 className="text-xl font-bold text-[#2C2A29] group-hover:text-emerald-800 transition-colors">
                           {mod.title}
@@ -565,21 +586,19 @@ export function LandingPage({
                         </p>
                       </div>
 
-                      {/* Minimalist Swatch / Tag Row */}
                       <div className="flex flex-wrap gap-2 pt-1">
-                        {mod.previewTags.map((tag) => (
+                        {mod.specs.map((spec) => (
                           <span
-                            key={tag.label}
+                            key={spec}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#FAF8F4] border border-[#E2DAC6] rounded-sm text-xs font-semibold text-[#2C2A29]"
                           >
-                            <span className={`w-2.5 h-2.5 rounded-xs ${tag.color}`} aria-hidden="true" />
-                            <span>{tag.label}</span>
+                            <CheckCircle2 className="w-3 h-3 text-emerald-700" aria-hidden="true" />
+                            <span>{spec}</span>
                           </span>
                         ))}
                       </div>
                     </div>
 
-                    {/* Explicit Action Row */}
                     <div className="pt-4 border-t border-[#EDE7D9] w-full flex items-center justify-between">
                       <span className="inline-flex items-center gap-2 text-base font-bold text-emerald-700 group-hover:text-emerald-800">
                         <span>{mod.actionLabel}</span>
@@ -594,31 +613,27 @@ export function LandingPage({
               })}
             </div>
 
-            {/* Secondary Institutional Land-Class Reference Bar */}
+            {/* Bottom Callout Strip */}
             <div className="mt-12 bg-white border border-[#E2DAC6] rounded-lg p-7 flex flex-wrap items-center justify-between gap-6 shadow-[0_1px_2px_rgba(44,42,41,0.05)]">
               <div className="space-y-2 max-w-2xl">
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 block">
-                  Field-Ready Governance Outputs
+                  Institutional Verification Portal
                 </span>
                 <h3 className="text-xl font-bold text-[#2C2A29]">
-                  Access full village boundaries, hectare tables, and spectral plates.
+                  Launch the full WebGIS command center for live village assessments.
                 </h3>
                 <div className="flex flex-wrap items-center gap-4 pt-1 text-sm font-medium text-stone-700">
                   <span className="inline-flex items-center gap-1.5">
                     <Wheat className="w-4 h-4 text-emerald-700" aria-hidden="true" />
-                    <span>Cropland Monitoring</span>
+                    <span>Seasonal Crop Audits</span>
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <Waves className="w-4 h-4 text-[#346078]" aria-hidden="true" />
-                    <span>Water Bodies &amp; Floods</span>
+                    <span>Watershed Storage</span>
                   </span>
                   <span className="inline-flex items-center gap-1.5">
-                    <Home className="w-4 h-4 text-[#8F641B]" aria-hidden="true" />
-                    <span>Settlement Growth</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4 text-emerald-700" aria-hidden="true" />
-                    <span>Seasonal Audits</span>
+                    <Calendar className="w-4 h-4 text-[#8F641B]" aria-hidden="true" />
+                    <span>Multi-Date History</span>
                   </span>
                 </div>
               </div>
