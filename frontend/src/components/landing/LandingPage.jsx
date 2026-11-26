@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Landmark,
   LayoutDashboard,
@@ -20,6 +20,9 @@ import {
   Workflow,
   Radar,
   Calendar,
+  ChevronLeft,
+  ChevronRight,
+  ImageIcon,
 } from 'lucide-react';
 
 /**
@@ -34,6 +37,57 @@ export function LandingPage({
   isConnected = true,
 }) {
   const [activeLayerPreview, setActiveLayerPreview] = useState('optical');
+
+  /* ── Satellite Imagery Carousel ── */
+  const carouselSlides = [
+    {
+      src: '/images/slider-1.jpg',
+      alt: 'High-resolution satellite terrain mosaic — agricultural parcels and settlement clusters',
+      caption: 'Satellite Terrain Mosaic',
+      detail: 'Sentinel-2 True-Color Composite · 10m Resolution',
+      needsCrop: true,
+    },
+    {
+      src: '/images/slider-2.webp',
+      alt: 'Thermal infrared land surface temperature overlay across agricultural fields',
+      caption: 'Thermal Surface Analysis',
+      detail: 'Land Surface Temperature · Infrared Band Composite',
+      needsCrop: false,
+    },
+    {
+      src: '/images/slider-3.jpg',
+      alt: '3D hydrological terrain model with flood contour mapping',
+      caption: 'Hydrological Contour Model',
+      detail: '3D Terrain Elevation · Flood Risk Delineation',
+      needsCrop: false,
+    },
+    {
+      src: '/images/slider-4.jpg',
+      alt: 'NDVI crop health classification overlay on agricultural parcels',
+      caption: 'NDVI Crop Health Index',
+      detail: 'Vegetation Vigor Classification · Random Forest AI',
+      needsCrop: false,
+    },
+  ];
+
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  const goToSlide = useCallback(
+    (index) => {
+      setActiveSlide((index + carouselSlides.length) % carouselSlides.length);
+    },
+    [carouselSlides.length],
+  );
+
+  const goNext = useCallback(() => goToSlide(activeSlide + 1), [activeSlide, goToSlide]);
+  const goPrev = useCallback(() => goToSlide(activeSlide - 1), [activeSlide, goToSlide]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % carouselSlides.length);
+    }, 4500);
+    return () => clearInterval(timer);
+  }, [carouselSlides.length]);
 
   const layerSnapshots = {
     optical: {
@@ -444,6 +498,107 @@ export function LandingPage({
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 2b. Satellite Imagery Carousel ── */}
+        <section
+          aria-label="Satellite Imagery Showcase"
+          className="py-14 lg:py-18 bg-white border-b border-[#E2DAC6]"
+        >
+          <div className="max-w-6xl mx-auto px-6 lg:px-10">
+            {/* Section Label */}
+            <div className="flex items-center gap-2.5 mb-6">
+              <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700">
+                <ImageIcon className="w-4 h-4" aria-hidden="true" />
+                <span>Spatial Observation Gallery</span>
+              </span>
+              <span className="flex-1 h-px bg-[#E2DAC6]" aria-hidden="true" />
+              <span className="text-xs font-mono font-semibold text-stone-500">
+                {String(activeSlide + 1).padStart(2, '0')} / {String(carouselSlides.length).padStart(2, '0')}
+              </span>
+            </div>
+
+            {/* Carousel Frame */}
+            <div className="relative border border-[#E2DAC6] rounded-lg shadow-[0_3px_10px_rgba(44,42,41,0.07)] overflow-hidden bg-[#F7F5F0]">
+              {/* Image Viewport */}
+              <div className="relative h-[420px] sm:h-[480px] lg:h-[520px] w-full overflow-hidden">
+                {carouselSlides.map((slide, index) => (
+                  <div
+                    key={slide.src}
+                    className={`absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out ${
+                      index === activeSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                    }`}
+                    aria-hidden={index !== activeSlide}
+                  >
+                    <img
+                      src={slide.src}
+                      alt={slide.alt}
+                      loading={index === 0 ? 'eager' : 'lazy'}
+                      className={`w-full h-full object-cover ${
+                        slide.needsCrop ? 'scale-[1.15] origin-center' : ''
+                      }`}
+                    />
+                  </div>
+                ))}
+
+                {/* Prev / Next Arrow Buttons */}
+                <button
+                  type="button"
+                  onClick={goPrev}
+                  aria-label="Previous slide"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-md bg-white/85 border border-[#E2DAC6] flex items-center justify-center text-[#2C2A29] hover:bg-white hover:border-emerald-700 transition-colors cursor-pointer shadow-[0_1px_3px_rgba(44,42,41,0.1)]"
+                >
+                  <ChevronLeft className="w-5 h-5" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={goNext}
+                  aria-label="Next slide"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-md bg-white/85 border border-[#E2DAC6] flex items-center justify-center text-[#2C2A29] hover:bg-white hover:border-emerald-700 transition-colors cursor-pointer shadow-[0_1px_3px_rgba(44,42,41,0.1)]"
+                >
+                  <ChevronRight className="w-5 h-5" aria-hidden="true" />
+                </button>
+
+                {/* Navigation Dots */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+                  {carouselSlides.map((slide, index) => (
+                    <button
+                      key={slide.src}
+                      type="button"
+                      onClick={() => goToSlide(index)}
+                      aria-label={`Go to slide ${index + 1}: ${slide.caption}`}
+                      aria-current={index === activeSlide ? 'true' : undefined}
+                      className={`rounded-full transition-all duration-300 cursor-pointer border ${
+                        index === activeSlide
+                          ? 'w-7 h-2.5 bg-emerald-700 border-emerald-800'
+                          : 'w-2.5 h-2.5 bg-white/80 border-stone-300 hover:bg-white hover:border-emerald-600'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Caption Bar */}
+              <div className="px-5 py-3.5 bg-white border-t border-[#E2DAC6] flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="w-8 h-8 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+                    <Satellite className="w-4 h-4 text-emerald-700" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <span className="text-sm font-bold text-[#2C2A29] block leading-tight">
+                      {carouselSlides[activeSlide].caption}
+                    </span>
+                    <span className="text-xs text-stone-600">
+                      {carouselSlides[activeSlide].detail}
+                    </span>
+                  </div>
+                </div>
+                <span className="text-xs font-mono font-semibold text-stone-500 bg-[#FAF8F4] border border-[#E2DAC6] px-2.5 py-1 rounded-sm">
+                  Slide {activeSlide + 1} of {carouselSlides.length}
+                </span>
               </div>
             </div>
           </div>
