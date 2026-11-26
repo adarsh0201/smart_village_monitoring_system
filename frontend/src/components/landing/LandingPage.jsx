@@ -10,19 +10,14 @@ import {
   Satellite,
   Cpu,
   ClipboardCheck,
-  Leaf,
-  CloudRain,
   Grid,
   Wheat,
   Waves,
-  Home,
   CheckCircle2,
   Workflow,
-  Radar,
   Calendar,
   ChevronLeft,
   ChevronRight,
-  ImageIcon,
 } from 'lucide-react';
 
 /**
@@ -36,8 +31,6 @@ export function LandingPage({
   sceneCount = 0,
   isConnected = true,
 }) {
-  const [activeLayerPreview, setActiveLayerPreview] = useState('optical');
-
   /* ── Satellite Imagery Carousel ── */
   const carouselSlides = [
     {
@@ -88,110 +81,6 @@ export function LandingPage({
     }, 4500);
     return () => clearInterval(timer);
   }, [carouselSlides.length]);
-
-  const layerSnapshots = {
-    optical: {
-      label: 'Optical Vegetation',
-      sensor: 'Sentinel-2 Level-2A (10m)',
-      cards: [
-        {
-          title: 'Vegetation Health',
-          value: 'NDVI: 0.61',
-          detail: 'Healthy irrigated canopy',
-          icon: Leaf,
-          accent: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-        },
-        {
-          title: 'Precipitation (30 Days)',
-          value: 'Rainfall: 42mm',
-          detail: 'Post-monsoon moisture balance',
-          icon: CloudRain,
-          accent: 'text-[#346078] bg-[#EEF4F7] border-[#BACEDB]',
-        },
-        {
-          title: 'AI Classification',
-          value: 'Cropland',
-          detail: '6-Feature Random Forest inference',
-          icon: Wheat,
-          accent: 'text-[#8F641B] bg-[#FAF3E3] border-[#E2CFA3]',
-        },
-      ],
-      distribution: [
-        { name: 'Cropland', pct: 62, color: 'bg-[#4A7C59]' },
-        { name: 'Tree Canopy', pct: 18, color: 'bg-[#2E5238]' },
-        { name: 'Settlements', pct: 12, color: 'bg-[#B35C44]' },
-        { name: 'Water Bodies', pct: 8, color: 'bg-[#3D6E8A]' },
-      ],
-    },
-    radar: {
-      label: 'SAR Backscatter',
-      sensor: 'Sentinel-1 IW GRDH (All-Weather)',
-      cards: [
-        {
-          title: 'Vertical Transmit / Receive',
-          value: 'VV: -9.4 dB',
-          detail: 'Surface roughness & moisture response',
-          icon: Radar,
-          accent: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-        },
-        {
-          title: 'Cross-Polarization',
-          value: 'VH: -16.2 dB',
-          detail: 'Volume scattering in dense crops',
-          icon: Layers,
-          accent: 'text-[#346078] bg-[#EEF4F7] border-[#BACEDB]',
-        },
-        {
-          title: 'Cloud Interference',
-          value: '0% Obscured',
-          detail: 'C-band radar penetrates cloud cover',
-          icon: CheckCircle2,
-          accent: 'text-[#8F641B] bg-[#FAF3E3] border-[#E2CFA3]',
-        },
-      ],
-      distribution: [
-        { name: 'Vegetated Cover', pct: 58, color: 'bg-[#4A7C59]' },
-        { name: 'Woody Structure', pct: 20, color: 'bg-[#2E5238]' },
-        { name: 'Built Reflectors', pct: 14, color: 'bg-[#B35C44]' },
-        { name: 'Smooth Water', pct: 8, color: 'bg-[#3D6E8A]' },
-      ],
-    },
-    hydrology: {
-      label: 'Hydrology & Terrain',
-      sensor: 'NDWI + Copernicus DEM (GLO-30)',
-      cards: [
-        {
-          title: 'Surface Water Index',
-          value: 'NDWI: +0.34',
-          detail: 'Village talab & canal delineation',
-          icon: Waves,
-          accent: 'text-[#346078] bg-[#EEF4F7] border-[#BACEDB]',
-        },
-        {
-          title: 'Mean Terrain Slope',
-          value: 'Slope: 1.8°',
-          detail: 'Alluvial basin flood susceptibility',
-          icon: Compass,
-          accent: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-        },
-        {
-          title: 'Settlement Audit',
-          value: 'Built-Up: 12%',
-          detail: 'Parcel expansion monitoring',
-          icon: Home,
-          accent: 'text-[#8F641B] bg-[#FAF3E3] border-[#E2CFA3]',
-        },
-      ],
-      distribution: [
-        { name: 'Agricultural Basin', pct: 64, color: 'bg-[#4A7C59]' },
-        { name: 'Riparian Canopy', pct: 15, color: 'bg-[#2E5238]' },
-        { name: 'Settlements', pct: 12, color: 'bg-[#B35C44]' },
-        { name: 'Surface Reservoirs', pct: 9, color: 'bg-[#3D6E8A]' },
-      ],
-    },
-  };
-
-  const currentSnapshot = layerSnapshots[activeLayerPreview] || layerSnapshots.optical;
 
   const processSteps = [
     {
@@ -388,217 +277,87 @@ export function LandingPage({
                 </div>
               </div>
 
-              {/* Right Column: Interactive Data Cards & Observation Ledger (Clean UI, Zero Graphics) */}
-              <div className="lg:col-span-6">
-                <div className="bg-white border border-[#E2DAC6] rounded-lg p-6 sm:p-7 shadow-[0_3px_10px_rgba(44,42,41,0.07)] space-y-6">
-                  {/* Card Header & Interactive Sensor Switcher */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#E2DAC6]">
-                    <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 block">
-                        Sample Village Observation Ledger
-                      </span>
-                      <h2 className="text-lg font-bold text-[#2C2A29] mt-0.5">
-                        {currentSnapshot.sensor}
-                      </h2>
-                    </div>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-[#FAF8F4] border border-[#E2DAC6] text-xs font-mono font-semibold text-[#2C2A29]">
-                      <Compass className="w-3.5 h-3.5 text-emerald-700" aria-hidden="true" />
-                      <span>EPSG:4326</span>
-                    </span>
-                  </div>
-
-                  {/* Interactive Band Switcher Tabs */}
-                  <div
-                    role="tablist"
-                    aria-label="Preview Satellite Observation Modes"
-                    className="grid grid-cols-3 gap-2 p-1 bg-[#F7F5F0] border border-[#E2DAC6] rounded-md"
-                  >
-                    {Object.entries(layerSnapshots).map(([key, item]) => {
-                      const isActive = activeLayerPreview === key;
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          onClick={() => setActiveLayerPreview(key)}
-                          className={`px-3 py-2 rounded-sm text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
-                            isActive
-                              ? 'bg-emerald-700 text-white shadow-[0_1px_2px_rgba(44,42,41,0.12)]'
-                              : 'text-[#2C2A29] hover:bg-white'
+              {/* Right Column: Satellite Imagery Carousel */}
+              <div className="lg:col-span-6 flex flex-col">
+                <div className="relative border border-[#E2DAC6] rounded-lg shadow-[0_3px_10px_rgba(44,42,41,0.07)] overflow-hidden bg-[#F7F5F0]">
+                  {/* Image Viewport */}
+                  <div className="relative h-[280px] sm:h-[340px] lg:h-[380px] w-full overflow-hidden">
+                    {carouselSlides.map((slide, index) => (
+                      <div
+                        key={slide.src}
+                        className={`absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out ${
+                          index === activeSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                        }`}
+                        aria-hidden={index !== activeSlide}
+                      >
+                        <img
+                          src={slide.src}
+                          alt={slide.alt}
+                          loading={index === 0 ? 'eager' : 'lazy'}
+                          className={`w-full h-full object-cover ${
+                            slide.needsCrop ? 'scale-[1.15] origin-center' : ''
                           }`}
-                        >
-                          {item.label}
-                        </button>
-                      );
-                    })}
-                  </div>
+                        />
+                      </div>
+                    ))}
 
-                  {/* Structured Data Metric Cards (NDVI, Rainfall, Classification) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                    {currentSnapshot.cards.map((card) => {
-                      const CardIcon = card.icon;
-                      return (
-                        <div
-                          key={card.title}
-                          className="bg-[#FAF8F4] border border-[#E2DAC6] rounded-md p-4 flex flex-col justify-between gap-2.5"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`w-8 h-8 rounded-sm border flex items-center justify-center shrink-0 ${card.accent}`}
-                            >
-                              <CardIcon className="w-4 h-4" aria-hidden="true" />
-                            </span>
-                            <span className="text-xs font-semibold text-stone-600 leading-tight">
-                              {card.title}
-                            </span>
-                          </div>
-                          <div>
-                            <div className="text-base font-bold font-mono text-[#2C2A29]">
-                              {card.value}
-                            </div>
-                            <div className="text-xs text-stone-600 mt-1">{card.detail}</div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                    {/* Prev / Next Arrow Buttons */}
+                    <button
+                      type="button"
+                      onClick={goPrev}
+                      aria-label="Previous slide"
+                      className="absolute left-2.5 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-md bg-white/85 border border-[#E2DAC6] flex items-center justify-center text-[#2C2A29] hover:bg-white hover:border-emerald-700 transition-colors cursor-pointer shadow-[0_1px_3px_rgba(44,42,41,0.1)]"
+                    >
+                      <ChevronLeft className="w-4.5 h-4.5" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={goNext}
+                      aria-label="Next slide"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-md bg-white/85 border border-[#E2DAC6] flex items-center justify-center text-[#2C2A29] hover:bg-white hover:border-emerald-700 transition-colors cursor-pointer shadow-[0_1px_3px_rgba(44,42,41,0.1)]"
+                    >
+                      <ChevronRight className="w-4.5 h-4.5" aria-hidden="true" />
+                    </button>
 
-                  {/* Terrain Composition Reference Bar */}
-                  <div className="pt-2 space-y-2.5">
-                    <div className="flex items-center justify-between text-xs font-semibold text-stone-600">
-                      <span className="uppercase tracking-wide">
-                        Terrain Class Share (Indicative Village Audit)
-                      </span>
-                      <span className="font-mono text-[#2C2A29]">100% Parcel Grid</span>
-                    </div>
-
-                    <div className="h-3.5 w-full rounded-sm overflow-hidden flex border border-[#E2DAC6]">
-                      {currentSnapshot.distribution.map((seg) => (
-                        <div
-                          key={seg.name}
-                          style={{ width: `${seg.pct}%` }}
-                          className={seg.color}
-                          title={`${seg.name}: ${seg.pct}%`}
+                    {/* Navigation Dots */}
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+                      {carouselSlides.map((slide, index) => (
+                        <button
+                          key={slide.src}
+                          type="button"
+                          onClick={() => goToSlide(index)}
+                          aria-label={`Go to slide ${index + 1}: ${slide.caption}`}
+                          aria-current={index === activeSlide ? 'true' : undefined}
+                          className={`rounded-full transition-all duration-300 cursor-pointer border ${
+                            index === activeSlide
+                              ? 'w-6 h-2 bg-emerald-700 border-emerald-800'
+                              : 'w-2 h-2 bg-white/80 border-stone-300 hover:bg-white hover:border-emerald-600'
+                          }`}
                         />
                       ))}
                     </div>
+                  </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                      {currentSnapshot.distribution.map((seg) => (
-                        <div key={seg.name} className="flex items-center gap-1.5 text-xs">
-                          <span
-                            className={`w-2.5 h-2.5 rounded-xs shrink-0 ${seg.color}`}
-                            aria-hidden="true"
-                          />
-                          <span className="font-medium text-stone-700 truncate">{seg.name}</span>
-                          <span className="font-mono font-bold text-[#2C2A29]">{seg.pct}%</span>
-                        </div>
-                      ))}
+                  {/* Caption Bar */}
+                  <div className="px-4 py-3 bg-white border-t border-[#E2DAC6] flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-7 h-7 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+                        <Satellite className="w-3.5 h-3.5 text-emerald-700" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <span className="text-sm font-bold text-[#2C2A29] block leading-tight truncate">
+                          {carouselSlides[activeSlide].caption}
+                        </span>
+                        <span className="text-xs text-stone-600 truncate block">
+                          {carouselSlides[activeSlide].detail}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ── 2b. Satellite Imagery Carousel ── */}
-        <section
-          aria-label="Satellite Imagery Showcase"
-          className="py-14 lg:py-18 bg-white border-b border-[#E2DAC6]"
-        >
-          <div className="max-w-6xl mx-auto px-6 lg:px-10">
-            {/* Section Label */}
-            <div className="flex items-center gap-2.5 mb-6">
-              <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700">
-                <ImageIcon className="w-4 h-4" aria-hidden="true" />
-                <span>Spatial Observation Gallery</span>
-              </span>
-              <span className="flex-1 h-px bg-[#E2DAC6]" aria-hidden="true" />
-              <span className="text-xs font-mono font-semibold text-stone-500">
-                {String(activeSlide + 1).padStart(2, '0')} / {String(carouselSlides.length).padStart(2, '0')}
-              </span>
-            </div>
-
-            {/* Carousel Frame */}
-            <div className="relative border border-[#E2DAC6] rounded-lg shadow-[0_3px_10px_rgba(44,42,41,0.07)] overflow-hidden bg-[#F7F5F0]">
-              {/* Image Viewport */}
-              <div className="relative h-[420px] sm:h-[480px] lg:h-[520px] w-full overflow-hidden">
-                {carouselSlides.map((slide, index) => (
-                  <div
-                    key={slide.src}
-                    className={`absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out ${
-                      index === activeSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                    }`}
-                    aria-hidden={index !== activeSlide}
-                  >
-                    <img
-                      src={slide.src}
-                      alt={slide.alt}
-                      loading={index === 0 ? 'eager' : 'lazy'}
-                      className={`w-full h-full object-cover ${
-                        slide.needsCrop ? 'scale-[1.15] origin-center' : ''
-                      }`}
-                    />
-                  </div>
-                ))}
-
-                {/* Prev / Next Arrow Buttons */}
-                <button
-                  type="button"
-                  onClick={goPrev}
-                  aria-label="Previous slide"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-md bg-white/85 border border-[#E2DAC6] flex items-center justify-center text-[#2C2A29] hover:bg-white hover:border-emerald-700 transition-colors cursor-pointer shadow-[0_1px_3px_rgba(44,42,41,0.1)]"
-                >
-                  <ChevronLeft className="w-5 h-5" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={goNext}
-                  aria-label="Next slide"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-md bg-white/85 border border-[#E2DAC6] flex items-center justify-center text-[#2C2A29] hover:bg-white hover:border-emerald-700 transition-colors cursor-pointer shadow-[0_1px_3px_rgba(44,42,41,0.1)]"
-                >
-                  <ChevronRight className="w-5 h-5" aria-hidden="true" />
-                </button>
-
-                {/* Navigation Dots */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
-                  {carouselSlides.map((slide, index) => (
-                    <button
-                      key={slide.src}
-                      type="button"
-                      onClick={() => goToSlide(index)}
-                      aria-label={`Go to slide ${index + 1}: ${slide.caption}`}
-                      aria-current={index === activeSlide ? 'true' : undefined}
-                      className={`rounded-full transition-all duration-300 cursor-pointer border ${
-                        index === activeSlide
-                          ? 'w-7 h-2.5 bg-emerald-700 border-emerald-800'
-                          : 'w-2.5 h-2.5 bg-white/80 border-stone-300 hover:bg-white hover:border-emerald-600'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Caption Bar */}
-              <div className="px-5 py-3.5 bg-white border-t border-[#E2DAC6] flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="w-8 h-8 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
-                    <Satellite className="w-4 h-4 text-emerald-700" aria-hidden="true" />
-                  </span>
-                  <div>
-                    <span className="text-sm font-bold text-[#2C2A29] block leading-tight">
-                      {carouselSlides[activeSlide].caption}
-                    </span>
-                    <span className="text-xs text-stone-600">
-                      {carouselSlides[activeSlide].detail}
+                    <span className="text-xs font-mono font-semibold text-stone-500 bg-[#FAF8F4] border border-[#E2DAC6] px-2 py-0.5 rounded-sm shrink-0">
+                      {activeSlide + 1}/{carouselSlides.length}
                     </span>
                   </div>
                 </div>
-                <span className="text-xs font-mono font-semibold text-stone-500 bg-[#FAF8F4] border border-[#E2DAC6] px-2.5 py-1 rounded-sm">
-                  Slide {activeSlide + 1} of {carouselSlides.length}
-                </span>
               </div>
             </div>
           </div>
